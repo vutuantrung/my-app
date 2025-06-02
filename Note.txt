@@ -1,0 +1,29 @@
+Unicons: need to import in App.tsx
+
+Owl Carousel: need to add this to script in index.html (React)
+<script>
+    $(document).ready(function () {
+        $('.owl-carousel').owlCarousel();
+    });
+</script>
+
+Scripts not run: need to put all code from custom.js, night-mode.js
+<script>
+    $(document).ready(function () {
+        ... <code in custom.js, night-mode.js>
+    });
+</script>
+
+<img (.*)>
+<img $1 />
+
+onclick="(.*)" 
+onClick={()=>"$1"} 
+
+tabindex="([0-9]*)"
+tabIndex={$1}
+
+jvid api
+https://ser.jvid.com/api/product/index?userId=109815&category=all&sort=publish_at_desc&page=1&size=20&isProfile=true
+
+cosplaynsfw api

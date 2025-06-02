@@ -1,0 +1,8 @@
+model_profile
++ id: INTEGER, PRIMANY KEY
++ name: TEXT, NOT_NULL
++ age: INTEGER
++ measurement: TEXT
++ height: INTEGERE
++ country: TEXT
++ source: TEXT

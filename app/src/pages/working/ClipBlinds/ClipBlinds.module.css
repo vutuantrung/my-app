@@ -1,0 +1,80 @@
+@keyframes clip_clipBlinds_1 {
+    0% {
+        clip-path: polygon(0% -50%, 50% -50%, -50% 50%, -100% 50%);
+    }
+    100% {
+        clip-path: polygon(150% 50%, 200% 50%, 100% 150%, 50% 150%);
+    }
+}
+@keyframes clip_clipBlinds_a {
+    0% {
+        clip-path: polygon(-5% -55%, 55% -45%, -45% 55%, -95% 55%);
+    }
+    100% {
+        clip-path: polygon(150% 50%, 200% 50%, 100% 150%, 50% 150%);
+    }
+}
+@keyframes clip_clipBlinds_2 {
+    0% {
+        clip-path: polygon(50% -50%, 100% -50%, 200% 50%, 150% 50%);
+    }
+    100% {
+        clip-path: polygon(-100% 50%, -50% 50%, 50% 150%, 0% 150%);
+    }
+}
+@keyframes clip_clipBlinds_b {
+    0% {
+        clip-path: polygon(40% -60%, 100% -50%, 190% 40%, 150% 50%);
+    }
+    100% {
+        clip-path: polygon(-100% 50%, -50% 50%, 50% 150%, 0% 150%);
+    }
+}
+@keyframes clip_clipBlinds_3 {
+    0% {
+        clip-path: polygon(-100% -150%, -50% -150%, -150% -50%, -200% -50%);
+    }
+    100% {
+        clip-path: polygon(150% 50%, 200% 50%, 100% 150%, 50% 150%);
+    }
+}
+@keyframes clip_clipBlinds_4 {
+    0% {
+        clip-path: polygon(150% -150%, 200% -150%, 300% -50%, 250% -50%);
+    }
+    100% {
+        clip-path: polygon(-100% 50%, -50% 50%, 50% 150%, 0% 150%);
+    }
+}
+
+.clip_clipBlinds {
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    background: url(../../../assets/images/test/bgHorizontal/bg.jpg) no-repeat center;
+    transform-origin: center;
+}
+#clip_clipBlinds_1 {
+    animation: clip_clipBlinds_1 4s linear infinite;
+}
+#clip_clipBlinds_a {
+    transform: scale(1.1, 1.1);
+    animation: clip_clipBlinds_a 9s linear infinite;
+}
+#clip_clipBlinds_2 {
+    z-index: 10;
+    transform: scale(1.12, 1.12);
+    animation: clip_clipBlinds_2 5s linear infinite;
+}
+#clip_clipBlinds_b {
+    transform: scale(1.14, 1.14);
+    animation: clip_clipBlinds_b 4s linear infinite;
+}
+#clip_clipBlinds_3 {
+    transform: scale(1.15, 1.15);
+    animation: clip_clipBlinds_3 7s linear infinite;
+}
+#clip_clipBlinds_4 {
+    transform: scale(1.13, 1.13);
+    animation: clip_clipBlinds_4 6s linear infinite;
+}

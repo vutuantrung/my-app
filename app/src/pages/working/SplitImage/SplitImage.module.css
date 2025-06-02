@@ -1,0 +1,33 @@
+.wrapper {
+    padding: 0;
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+.placeholder {
+    display: inline-block;
+    position: relative;
+    width: 80vw;
+    height: 80vh;
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+.gridContainer {
+    width: 100%;
+    height: 100%;
+}
+
+.gridTile {
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    width: 100%;
+    height: 100%;
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-origin: center;
+}
