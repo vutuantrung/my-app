@@ -1,11 +1,15 @@
-import { useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import styles from './Explore.module.css';
+
+import { useEffect, useState } from 'react';
 
 import AppFooter from '../../../Layouts/AppFooter';
 import { generateRandomNumber } from '../../../helpers/helpers';
 import LiveStreamCard from '../../../components/LiveStreamCard';
+import CourseCard from '../../../components/CourseCard';
+import SearchingCard from '../../../components/SearchingCard';
 
 const Explore = () => {
+    const [searchingModelName, setSearchingModelName] = useState<string>('');
     useEffect(() => {
         const navText = ["<i class='uil uil-angle-left'></i>", "<i class='uil uil-angle-right'></i>"];
         const carouselOptions = {
@@ -42,9 +46,8 @@ const Explore = () => {
         });
         /*Floating Code for Iframe Start*/
         if (
-            $(
-                'iframe[src*="https://www.youtube.com/embed/"],iframe[src*="https://player.vimeo.com/"],iframe[src*="https://player.vimeo.com/"]'
-            ).length > 0
+            $('iframe[src*="https://www.youtube.com/embed/"],iframe[src*="https://player.vimeo.com/"],iframe[src*="https://player.vimeo.com/"]')
+                .length > 0
         ) {
             /*Wrap (all code inside div) all vedio code inside div*/
             $('iframe[src*="https://www.youtube.com/embed/"],iframe[src*="https://player.vimeo.com/"]').wrap(
@@ -279,26 +282,120 @@ const Explore = () => {
         },
     ];
 
+    async function handleKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+        if (event.key === 'Enter') {
+            const modelName = event.currentTarget.value.trim();
+            // Checking in javdatabase if image exists
+            if (modelName) {
+                setSearchingModelName(modelName);
+                let queryName = !modelName.includes(' ') ? modelName : modelName.split(' ').join('-').toLowerCase();
+                console.log(`Searching for model: ${queryName}`);
+
+                // Todo: search in sqlite database
+                const modelData = null;
+                if (!modelData) {
+                    const isJavDatabaseExists = await checkJavDatabaseExists(modelName);
+                    const isJJGirlsExists = await checkJJGirlseExists(modelName);
+                    console.log(`Model Name: ${modelName}`);
+                    console.log(`JavDatabase Exists: ${isJavDatabaseExists}`);
+                    console.log(`JJGirls Exists: ${isJJGirlsExists}`);
+                    if (isJavDatabaseExists) {
+                        fetch(`http://localhost:3001/api/scrape?modelName=${queryName}`)
+                            .then((res) => {
+                                console.log(res.ok);
+                                return res;
+                            })
+                            .then((html) => console.log(html))
+                            .catch((err) => console.error('Fetch error:', err));
+                    }
+                }
+            }
+        }
+    }
+
+    function checkJavDatabaseExists(modelName: string): Promise<boolean> {
+        return new Promise((resolve) => {
+            const imageUrl = `https://www.javdatabase.com/idolimages/full/${modelName}.webp`;
+            const img = new Image();
+            img.src = imageUrl;
+            img.onload = () => {
+                resolve(true);
+            };
+            img.onerror = () => {
+                resolve(false);
+            };
+        });
+    }
+
+    function checkJJGirlseExists(modelName: string): Promise<boolean> {
+        return new Promise((resolve) => {
+            const imageUrl = `https://jjgirls.com/japanese/${modelName}/1/${modelName}-1.jpg`;
+            const img = new Image();
+            img.src = imageUrl;
+            img.onload = () => {
+                resolve(true);
+            };
+            img.onerror = () => {
+                resolve(false);
+            };
+        });
+    }
+
+    const searchResult = [
+        {
+            name: 'nodoka-sakuraha',
+            country: 'japan',
+            height: 155,
+            measurement: '90-57-88',
+            dob: '1999-02-14',
+            metadata: 'jjgirls, javdatabase',
+            saved: false,
+        },
+        {
+            name: 'hikaru-nagi',
+            country: 'japan',
+            height: 162,
+            measurement: '105-59-88',
+            dob: '1997-04-06',
+            metadata: 'javdatabase',
+            saved: true,
+        },
+        {
+            name: 'eimi-fukada',
+            country: 'japan',
+            height: 158,
+            measurement: '85-59-91',
+            dob: '1998-03-18',
+            metadata: 'jjgirls, javdatabase',
+            saved: true,
+        },
+    ];
+
     return (
         <>
             <div className="sa4d25">
                 <div className="container-fluid">
                     <div className="row">
                         <div className="col-xl-12 col-lg-8">
-                            <div className="section3125">
-                                <div className="explore_search">
-                                    <div className="ui search focus">
-                                        <div className="ui left icon input swdh11">
-                                            <input
-                                                className="prompt srch_explore"
-                                                type="text"
-                                                placeholder="Search for Tuts Videos, Tutors, Tests and more.."
-                                                style={{ paddingLeft: '60px' }}
-                                            />
-                                            <i className="uil uil-search-alt icon icon2"></i>
-                                        </div>
-                                    </div>
+                            <div className="ui search focus">
+                                <div className="ui left icon input swdh11">
+                                    <input
+                                        onKeyDown={handleKeyDown}
+                                        className="prompt srch_explore"
+                                        type="text"
+                                        placeholder="Search for model name..."
+                                    />
+                                    <i
+                                        className="uil uil-search-alt icon icon2"
+                                        style={{ width: '35px', height: '30px', padding: '25px 0px 25px 20px' }}
+                                    ></i>
                                 </div>
+                            </div>
+                            <div className={styles['search-result']} style={{ display: 'flex', flexDirection: 'row' }}>
+                                {searchResult.length > 0 &&
+                                    searchResult.map((item, index) => {
+                                        return <SearchingCard key={item.name} {...item} />;
+                                    })}
                             </div>
                         </div>
                         <div className="col-md-12">
@@ -319,74 +416,9 @@ const Explore = () => {
                         <div className="col-md-12">
                             <div className="_14d25">
                                 <div className="row">
-                                    {courseDumpData.map((item) => {
-                                        return (
-                                            <div key={item.id} className="col-lg-3 col-md-4">
-                                                <div className="fcrse_1 mt-30">
-                                                    <Link to={`/coursDetails/${item.id}`}>
-                                                        <div className="fcrse_img">
-                                                            <img src={item.thumbs} alt="" />
-                                                            <div className="course-overlay">
-                                                                {item.isBestSeller && (
-                                                                    <div className="badge_seller">Bestseller</div>
-                                                                )}
-                                                                {item.points && (
-                                                                    <div className="crse_reviews">
-                                                                        <i className="uil uil-star"></i>
-                                                                        {item.points}
-                                                                    </div>
-                                                                )}
-                                                                <span className="play_btn1">
-                                                                    <i className="uil uil-play"></i>
-                                                                </span>
-                                                                <div className="crse_timer">{item.length}</div>
-                                                            </div>
-                                                        </div>
-                                                    </Link>
-                                                    <div className="fcrse_content">
-                                                        <div className="eps_dots more_dropdown">
-                                                            <a href="#">
-                                                                <i className="uil uil-ellipsis-v"></i>
-                                                            </a>
-                                                            <div className="dropdown-content">
-                                                                <span>
-                                                                    <i className="uil uil-share-alt"></i>Share
-                                                                </span>
-                                                                <span>
-                                                                    <i className="uil uil-heart"></i>Save
-                                                                </span>
-                                                                <span>
-                                                                    <i className="uil uil-ban"></i>Not Interested
-                                                                </span>
-                                                                <span>
-                                                                    <i className="uil uil-windsock"></i>Report
-                                                                </span>
-                                                            </div>
-                                                        </div>
-                                                        <div className="vdtodt">
-                                                            <span className="vdt14">{item.views} views</span>
-                                                            <span className="vdt14">{item.publishedDate} ago</span>
-                                                        </div>
-                                                        <Link to={`coursDetails/${item.id}`}>
-                                                            <div className="crse14s">{item.name}</div>
-                                                        </Link>
-                                                        <a href="#" className="crse-cate">
-                                                            {item.category}
-                                                        </a>
-                                                        <div className="auth1lnkprce">
-                                                            <p className="cr1fot">
-                                                                By <a href="#">{item.author}</a>
-                                                            </p>
-                                                            <div className="prce142">{item.price}</div>
-                                                            <button className="shrt-cart-btn" title="cart">
-                                                                <i className="uil uil-shopping-cart-alt"></i>
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
+                                    {courseDumpData.map((item) => (
+                                        <CourseCard key={item.id} {...item} />
+                                    ))}
                                     <div className="col-md-12">
                                         <div className="main-loader mt-50">
                                             <div className="spinner">

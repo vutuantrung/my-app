@@ -2,6 +2,10 @@ import { Link } from 'react-router-dom';
 import { IMAGES } from '../constants';
 
 const AppFooter = () => {
+    const tmpHiding = true;
+    if (tmpHiding) {
+        return null;
+    }
     return (
         <footer className="footer mt-30 ">
             <div className="row" style={{ margin: '0px' }}>
