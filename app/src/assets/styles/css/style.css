@@ -1683,7 +1683,6 @@ i.icon1 {
     border: 1px solid #efefef;
     position: relative;
     text-align: left;
-    margin-bottom: 30px;
     background-image: url(../../images/get-img.jpg);
 }
 
@@ -1761,7 +1760,7 @@ i.icon1 {
 .ct_item {
     float: left;
     width: 100%;
-    padding: 10px 20px;
+    padding: 5px 20px;
     font-size: 14px;
     font-family: 'Roboto', sans-serif;
     color: #686f7a;

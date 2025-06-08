@@ -97,7 +97,7 @@ export const Body = () => {
             <div className="sa4d25">
                 <div className="container-fluid">
                     <div className="row">
-                        <div className="col-xl-9 col-lg-8">
+                        <div className="col-xl-9 col-lg-8" style={{ paddingRight: "0px" }}>
                             <div style={{ display: 'flex', justifyContent: 'center' }}>
                                 <BubbleAvatars />
                             </div>
@@ -115,7 +115,7 @@ export const Body = () => {
                             <RightSideBar />
                         </div>
 
-                        <div className="col-xl-12 col-lg-12">
+                        <div className="col-xl-12 col-lg-12" style={{ padding: "0px" }}>
                             <StudentThoughtsSection />
                         </div>
                     </div>
