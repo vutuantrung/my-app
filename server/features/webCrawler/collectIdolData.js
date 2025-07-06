@@ -5,6 +5,7 @@ const { sleep } = require("../../helpers")
 const { parse } = require('node-html-parser');
 const { extractText, extractRawNamesIdol } = require('./webCrawler.utils');
 
+// Page: javdatabase
 async function crawlModel(modelName) {
     let data = {},
         htmlContentRoot = null,
@@ -207,4 +208,6 @@ async function crawlModel(modelName) {
     fs.writeFileSync(`./${modelName}.json`, JSON.stringify(data))
 }
 
-crawlModel("haru-minami"); 
+module.exports = { crawlModel }
+
+// crawlModel("haru-minami"); 

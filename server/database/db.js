@@ -1,9 +1,9 @@
 const sqlite3 = require('sqlite3').verbose();
-const db = new sqlite3.Database('./database.sqlite');
+const db = new sqlite3.Database('./database/my-db');
 
 db.serialize(() => {
     db.run(`
-    CREATE TABLE IF NOT EXISTS model_profile (
+    CREATE TABLE IF NOT EXISTS idol_profile (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
       dob TEXT,
@@ -14,6 +14,7 @@ db.serialize(() => {
       movies_count INTEGER DEFAULT 0,
       metadata TEXT
     )`);
+
     db.run(`
     CREATE TABLE IF NOT EXISTS movie (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -24,23 +25,11 @@ db.serialize(() => {
       metadata TEXT
     )`);
 
+    // relation: idol - movie
     db.run(`
-    CREATE TABLE IF NOT EXISTS movie_serie (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL,
-      rawName TEXT NOT NULL
-    )`);
-
-    // Tags
-    db.run(`
-    CREATE TABLE IF NOT EXISTS movie_tag (
-      name TEXT NOT NULL,
-      rawName TEXT NOT NULL
-    )`);
-    db.run(`
-    CREATE TABLE IF NOT EXISTS model_tag (
-      name TEXT NOT NULL,
-      rawName TEXT NOT NULL
+    CREATE TABLE IF NOT EXISTS idol_movie (
+      idol_name TEXT NOT NULL,
+      movie_code TEXT NOT NULL
     )`);
 });
 

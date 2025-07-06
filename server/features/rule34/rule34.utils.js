@@ -110,4 +110,10 @@ function removeDuplicateUrls(filePath, destPath, externalUrls = []) {
     }
 }
 
+function crawlAndDownloadImages() {
+    // https://wimg.rule34.xxx/thumbnails/2019/thumbnail_d2d1bd31ec6d17f449dce80ac4bd0189.jpg?13441858
+    // https://wimg.rule34.xxx//samples/2019/sample_d2d1bd31ec6d17f449dce80ac4bd0189.jpg?13441858
+    // https://wimg.rule34.xxx//images/2019/d2d1bd31ec6d17f449dce80ac4bd0189.jpeg
+}
+
 module.exports = { removeDuplicateUrls };
