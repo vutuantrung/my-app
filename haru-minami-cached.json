@@ -1,36 +1,70 @@
 {
-    "avatar": "default",
     "name": "Haru Minami",
-    "age": "29",
     "dob": "1996-06-09",
+    "measurements": "108-62-91",
+    "height": "175 cm",
+    "birthplace": "?",
+    "cup": "K",
+    "movies_count": "36",
+    "note": "4.73/5",
+    "favorite": "166",
+
+    "avatar": "default",
+    "age": "29",
     "debut": "2022-08-22",
     "debut_age": "26",
-    "birthplace": "?",
     "sign": "?",
     "blood": "?",
-    "measurements": "108-62-91",
-    "cup": "K",
-    "height": "175 cm",
     "shoe_size": "?",
     "hair_length(s)": "Long",
     "hair_color(s)": "Black",
     "tags": [
-        { "name": "birth_year", "value": "1996.00,1996.00" },
-        { "name": "debut_year", "value": "2022.00,2022.00" },
-        { "name": "debut_age", "value": "26.00,26.00" },
-        { "name": "cup_size", "value": "k" },
-        { "name": "height", "value": "175.00,175.00" },
-        { "name": "hair_length", "value": "long" },
-        { "name": "hair_color", "value": "black" },
-        { "name": "age_group", "value": "twenties" },
-        { "name": "body_type", "value": "big-tits" },
-        { "name": "body_type", "value": "slim" },
-        { "name": "body_type", "value": "tall" }
+        {
+            "name": "birth_year",
+            "value": "1996.00,1996.00"
+        },
+        {
+            "name": "debut_year",
+            "value": "2022.00,2022.00"
+        },
+        {
+            "name": "debut_age",
+            "value": "26.00,26.00"
+        },
+        {
+            "name": "cup_size",
+            "value": "k"
+        },
+        {
+            "name": "height",
+            "value": "175.00,175.00"
+        },
+        {
+            "name": "hair_length",
+            "value": "long"
+        },
+        {
+            "name": "hair_color",
+            "value": "black"
+        },
+        {
+            "name": "age_group",
+            "value": "twenties"
+        },
+        {
+            "name": "body_type",
+            "value": "big-tits"
+        },
+        {
+            "name": "body_type",
+            "value": "slim"
+        },
+        {
+            "name": "body_type",
+            "value": "tall"
+        }
     ],
     "jp": "みなみ羽琉Movies Link #1Movies Link #2Chat Link #1",
-    "note": "4.73/5",
-    "favorite": "167",
-    "movies_count": "36",
     "movies": [
         {
             "code": "SONE-776",
