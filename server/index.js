@@ -8,9 +8,10 @@ const PORT = 3001;
 app.use(cors());
 app.use(express.json());
 
-const modelProfileRoutes = require('./routes/idol.route.js');
-app.use('/api/idol', modelProfileRoutes);
-
+const idolProfileRoutes = require('./routes/idol.route.js');
+app.use('/api/idol', idolProfileRoutes);
+const movieRoutes = require('./routes/movie.route.js');
+app.use('/api/movie', movieRoutes);
 // app.get('/api/scrape', async (req, res) => {
 //     const { modelName } = req.query;
 //     try {
