@@ -2,11 +2,11 @@
 
 const path = require('path');
 const fs = require('fs');
-const { sleep } = require("../../helpers")
+const { sleep, downloadImageByUrl } = require("../../helpers")
 const { parse } = require('node-html-parser');
 const { extractText, extractRawNamesIdol } = require('./webCrawler.utils');
 const { default: axios } = require('axios');
-const { CACHED_FOLDER } = require('../../constants');
+const { CACHED_FOLDER, IDOL_AVATAR_FOLDER } = require('../../constants');
 
 // Page: javdatabase
 async function crawlIdol(name) {
@@ -65,8 +65,12 @@ async function crawlIdol(name) {
 
         //// GET MODEL INFORMATION
         if (!personalDataCollected) {
-            // 1. Personal data
+            // 1. Personal avatar
             data.avatar = "default";
+            const avatarImgSrc = root?.querySelector("div[class*='idol-portrait'] img");
+            if (avatarImgSrc) {
+                data.avatar = avatarImgSrc.getAttribute("src");
+            }
 
             // 2. Personal data
             const modelInfoNode = root?.querySelector("h1[class='idol-name']")?.parentNode;
@@ -235,12 +239,17 @@ async function crawlIdol(name) {
 
     // console.log(data);
 
+    // download idol avatar
+    await downloadImageByUrl(data.avatar, IDOL_AVATAR_FOLDER, name + "-avatar.jpg");
+
     const fileJsonPath = path.join(CACHED_FOLDER, name + ".json");
-    fs.writeFileSync(fileJsonPath, JSON.stringify(data))
+    fs.writeFileSync(fileJsonPath, JSON.stringify(data));
+
+    console.log(`✅ Page crawled succcessfully!`);
 
     return data;
 }
 
 module.exports = { crawlIdol }
 
-// crawlModel("haru-minami"); 
+// crawlIdol("haru-minami"); 
