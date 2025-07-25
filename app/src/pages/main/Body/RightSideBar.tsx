@@ -4,10 +4,10 @@ import Earth from '../../../components/Earth';
 
 export const RightSideBar = () => {
     return (
-        <div style={{ display: "flex", flexDirection: "row", gap: "10px", height: '95vh', position: "fixed" }}>
-            <div style={{ width: "50%", height: "auto", backgroundColor: "red" }}></div>
-            <div className="right_side" style={{ maxWidth: "50%", display: "flex", flexDirection: "column", gap: "5px" }}>
-                <div className="fcrse_2" style={{ height: "50%" }}>
+        <div style={{ display: 'flex', flexDirection: 'row', gap: '10px', height: '95vh', minWidth: '400px', position: 'fixed' }}>
+            <div style={{ width: '50%', height: 'auto', backgroundColor: 'red' }}></div>
+            <div className="right_side" style={{ maxWidth: '50%', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                <div className="fcrse_2" style={{ height: '50%' }}>
                     <div className="tutor_img">
                         <Link to="/myInstructorProfile" className="tutor_name">
                             <img src={IMAGES.avatar} alt="" />
@@ -74,7 +74,7 @@ export const RightSideBar = () => {
                         </div>
                     </div>
                 </div> */}
-                <div className="get1452" style={{ height: "20%" }}>
+                <div className="get1452" style={{ height: '20%' }}>
                     <h4>Get personalized recommendations</h4>
                     <p>Answer a few questions for your top picks</p>
 
@@ -87,7 +87,7 @@ export const RightSideBar = () => {
                         Get Started
                     </button>
                 </div>
-                <div className="fcrse_3" style={{ height: "30%" }}>
+                <div className="fcrse_3" style={{ height: '30%' }}>
                     <div className="cater_ttle">
                         <h4>Top Categories</h4>
                     </div>

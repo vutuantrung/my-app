@@ -2,71 +2,71 @@ const fs = require("fs");
 const { parse } = require('node-html-parser');
 
 const urls = [
-    "https://www.javdatabase.com/idols/?_sort_=most_favorited",
-    "https://www.javdatabase.com/idols/?_age_group=teen",
-    "https://www.javdatabase.com/idols/?_age_group=twenties",
-    "https://www.javdatabase.com/idols/?_age_group=milf",
-    "https://www.javdatabase.com/idols/?_age_group=mature",
-    "https://www.javdatabase.com/idols/?_body_type=big-tits",
-    "https://www.javdatabase.com/idols/?_body_type=big-ass",
-    "https://www.javdatabase.com/idols/?_body_type=loli",
-    "https://www.javdatabase.com/idols/?_birth_year=1994.00%2C1994.00",
-    "https://www.javdatabase.com/idols/?_debut_year=2013.00%2C2013.00",
-    "https://www.javdatabase.com/idols/?_debut_age=19.00%2C19.00",
-    "https://www.javdatabase.com/idols/?_birthplace=kyoto",
-    "https://www.javdatabase.com/idols/?_starsign=pisces",
-    "https://www.javdatabase.com/idols/?_cup_size=j",
-    "https://www.javdatabase.com/idols/?_height=161.00%2C161.00",
-    "https://www.javdatabase.com/idols/?_hair_length=long",
-    "https://www.javdatabase.com/idols/?_hair_color=black",
-    "https://www.javdatabase.com/idols/?_hair_color=brown",
-    "https://www.javdatabase.com/idols/?_body_type=slim",
-    "https://www.javdatabase.com/idols/fumika-nagano/",
-    "https://www.javdatabase.com/idols/?_cup_size=e",
-    "https://www.javdatabase.com/idols/mamiko-fujieda/",
-    "https://www.javdatabase.com/idols/?_cup_size=c",
-    "https://www.javdatabase.com/idols/chika-harada/",
-    "https://www.javdatabase.com/idols/?_height=162.00%2C162.00",
-    "https://www.javdatabase.com/idols/erina-asou/",
-    "https://www.javdatabase.com/idols/?_cup_size=f",
-    "https://www.javdatabase.com/idols/?_height=170.00%2C170.00",
-    "https://www.javdatabase.com/idols/mio-adachi/",
-    "https://www.javdatabase.com/idols/?_height=165.00%2C165.00",
-    "https://www.javdatabase.com/idols/akane-ayaka/",
-    "https://www.javdatabase.com/idols/?_cup_size=i",
-    "https://www.javdatabase.com/idols/yumika-nanaki/",
-    "https://www.javdatabase.com/idols/mayuri-hanamura/",
-    "https://www.javdatabase.com/idols/rara-anzai/"
+	"https://www.javdatabase.com/idols/?_sort_=most_favorited",
+	"https://www.javdatabase.com/idols/?_age_group=teen",
+	"https://www.javdatabase.com/idols/?_age_group=twenties",
+	"https://www.javdatabase.com/idols/?_age_group=milf",
+	"https://www.javdatabase.com/idols/?_age_group=mature",
+	"https://www.javdatabase.com/idols/?_body_type=big-tits",
+	"https://www.javdatabase.com/idols/?_body_type=big-ass",
+	"https://www.javdatabase.com/idols/?_body_type=loli",
+	"https://www.javdatabase.com/idols/?_birth_year=1994.00%2C1994.00",
+	"https://www.javdatabase.com/idols/?_debut_year=2013.00%2C2013.00",
+	"https://www.javdatabase.com/idols/?_debut_age=19.00%2C19.00",
+	"https://www.javdatabase.com/idols/?_birthplace=kyoto",
+	"https://www.javdatabase.com/idols/?_starsign=pisces",
+	"https://www.javdatabase.com/idols/?_cup_size=j",
+	"https://www.javdatabase.com/idols/?_height=161.00%2C161.00",
+	"https://www.javdatabase.com/idols/?_hair_length=long",
+	"https://www.javdatabase.com/idols/?_hair_color=black",
+	"https://www.javdatabase.com/idols/?_hair_color=brown",
+	"https://www.javdatabase.com/idols/?_body_type=slim",
+	"https://www.javdatabase.com/idols/fumika-nagano/",
+	"https://www.javdatabase.com/idols/?_cup_size=e",
+	"https://www.javdatabase.com/idols/mamiko-fujieda/",
+	"https://www.javdatabase.com/idols/?_cup_size=c",
+	"https://www.javdatabase.com/idols/chika-harada/",
+	"https://www.javdatabase.com/idols/?_height=162.00%2C162.00",
+	"https://www.javdatabase.com/idols/erina-asou/",
+	"https://www.javdatabase.com/idols/?_cup_size=f",
+	"https://www.javdatabase.com/idols/?_height=170.00%2C170.00",
+	"https://www.javdatabase.com/idols/mio-adachi/",
+	"https://www.javdatabase.com/idols/?_height=165.00%2C165.00",
+	"https://www.javdatabase.com/idols/akane-ayaka/",
+	"https://www.javdatabase.com/idols/?_cup_size=i",
+	"https://www.javdatabase.com/idols/yumika-nanaki/",
+	"https://www.javdatabase.com/idols/mayuri-hanamura/",
+	"https://www.javdatabase.com/idols/rara-anzai/"
 ];
 
 function execute() {
-    for (const url of urls) {
-        const decodeUrl = decodeURIComponent(url);
-        const reg = /https:\/\/www\.javdatabase\.com\/idols\/\?_(?<tag_name>.*)=(?<tag_val>.*)/;
-        const match = decodeUrl.match(reg);
-        if (match?.groups) {
-            console.log(match.groups.tag_name, match.groups.tag_val);
-        }
-    }
+	for (const url of urls) {
+		const decodeUrl = decodeURIComponent(url);
+		const reg = /https:\/\/www\.javdatabase\.com\/idols\/\?_(?<tag_name>.*)=(?<tag_val>.*)/;
+		const match = decodeUrl.match(reg);
+		if (match?.groups) {
+			console.log(match.groups.tag_name, match.groups.tag_val);
+		}
+	}
 }
 
 const client = require('https');
 const { getLastFolder, isValidImageURL, } = require("./features/jjgirls/jjgirls.utils");
 const { downloadImageByUrl } = require("./helpers");
 function downloadImage(url, filepath) {
-    return new Promise((resolve, reject) => {
-        client.get(url, (res) => {
-            if (res.statusCode === 200) {
-                res.pipe(fs.createWriteStream(filepath))
-                    .on('error', reject)
-                    .once('close', () => resolve(filepath));
-            } else {
-                // Consume response data to free up memory
-                res.resume();
-                reject(new Error(`Request Failed With a Status Code: ${res.statusCode}`));
-            }
-        });
-    });
+	return new Promise((resolve, reject) => {
+		client.get(url, (res) => {
+			if (res.statusCode === 200) {
+				res.pipe(fs.createWriteStream(filepath))
+					.on('error', reject)
+					.once('close', () => resolve(filepath));
+			} else {
+				// Consume response data to free up memory
+				res.resume();
+				reject(new Error(`Request Failed With a Status Code: ${res.statusCode}`));
+			}
+		});
+	});
 }
 
 ///// TESTING INSERT OR IGNORE MULTIPLE RECORDS IN DB
@@ -98,7 +98,7 @@ function downloadImage(url, filepath) {
 
 // const properties = ["code", "title", "studio", "release_date", "runtime", "note", "favorite", "my_favorite", "thumbs_short", "thumbs", "metadata"];
 
-// function createPropertiesColumns() {
+// function createPropertiesCREATEColumns() {
 //     return `(${properties.join(', ')})`;
 // }
 
@@ -115,7 +115,7 @@ function downloadImage(url, filepath) {
 //     db.serialize(() => {
 //         db.run(`BEGIN TRANSACTION`);
 //         const stmt = db.prepare(`
-//             INSERT OR IGNORE INTO movie ${createPropertiesColumns()}
+//             INSERT OR IGNORE INTO movie ${createPropertiesCREATEColumns()}
 //             VALUES ${createPropertiesValues()}`);
 //         for (const r of records) {
 //             stmt.run(createRecordArray(r));
@@ -128,7 +128,7 @@ function downloadImage(url, filepath) {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 async function execute() {
-    const result = await downloadImageByUrl("https://japanesebeauties.one/japanese/shoko-takahashi/56/shoko-takahashi-5.jpg", "database/idol-avatars");
-    console.log(result)
+	const result = await downloadImageByUrl("https://japanesebeauties.one/japanese/shoko-takahashi/56/shoko-takahashi-5.jpg", "database/idol-avatars");
+	console.log(result)
 }
 execute()

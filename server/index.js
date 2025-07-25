@@ -1,3 +1,20 @@
+const fs = require('fs');
+const path = require('path');
+const {
+	IDOL_AVATAR_FOLDER,
+	MOVIE_THUMBS_FOLDER,
+	CACHED_FOLDER,
+	SERVER_FOLDER_PATH
+} = require('./constants.js');
+
+if (!fs.existsSync(SERVER_FOLDER_PATH)) {
+	console.log(`External DB path does not exist: ${SERVER_FOLDER_PATH}, please create theses folders:
+		- ${IDOL_AVATAR_FOLDER}
+		- ${MOVIE_THUMBS_FOLDER}
+		- ${CACHED_FOLDER}`);
+	return;
+}
+
 const express = require('express');
 const cors = require('cors');
 const app = express();
@@ -8,46 +25,16 @@ const PORT = 3001;
 app.use(cors());
 app.use(express.json());
 
+// Serve static files from a 'public' directory
+app.use('/images', express.static(path.join(process.cwd(), 'database')));
+// console.log(path.join(process.cwd(), 'database'))
+
 const idolProfileRoutes = require('./routes/idol.route.js');
 app.use('/api/idol', idolProfileRoutes);
 const movieRoutes = require('./routes/movie.route.js');
+
 app.use('/api/movie', movieRoutes);
-// app.get('/api/scrape', async (req, res) => {
-//     const { modelName } = req.query;
-//     try {
-//         // const content = await httpGet(`https://www.javdatabase.com/idols/${encodeURIComponent(modelName)}`);
-//         // console.log(content)
-//         // const options = {
-//         // 	host: 'https://www.javdatabase.com/',
-//         // 	port: 443,
-//         // 	path: '/idols/' + encodeURIComponent(modelName),
-//         // };
-
-//         // console.log(options)
-
-//         const content = await getPageHTML(`https://www.javdatabase.com/idols/${encodeURIComponent(modelName)}`);
-//         console.log('[content]', content)
-//     } catch (err) {
-//         console.log(err)
-//         res.status(500).send('Error fetching URL');
-//     }
-// });
 
 app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
+	console.log(`Server is running on http://localhost:${PORT}`);
 });
-
-// const getPageHTML = async (pageUrl) => {
-//     const browser = await puppeteer.launch();
-
-//     const page = await browser.newPage();
-
-//     await page.goto('https://xslist.org/en/model/46565.html');
-
-//     const pageHTML = await page.evaluate('new XMLSerializer().serializeToString(document.doctype) + document.documentElement.outerHTML');
-
-//     await browser.close();
-
-//     return pageHTML;
-// }
-

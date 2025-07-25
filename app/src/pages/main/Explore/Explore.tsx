@@ -7,8 +7,40 @@ import { generateRandomNumber } from '../../../helpers/helpers';
 import LiveStreamCard from '../../../components/LiveStreamCard';
 import CourseCard from '../../../components/CourseCard';
 import SearchingCard from '../../../components/SearchingCard';
+import { searchModelProfile } from '../../../apis/modelProfile';
 
 const Explore = () => {
+    const searchResult = [
+        {
+            name: 'nodoka-sakuraha',
+            country: 'japan',
+            height: 155,
+            measurement: '90-57-88',
+            dob: '1999-02-14',
+            source: 'jjgirls, javdatabase',
+            saved: false,
+        },
+        {
+            name: 'hikaru-nagi',
+            country: 'japan',
+            height: 162,
+            measurement: '105-59-88',
+            dob: '1997-04-06',
+            source: 'javdatabase',
+            saved: true,
+        },
+        {
+            name: 'eimi-fukada',
+            country: 'japan',
+            height: 158,
+            measurement: '85-59-91',
+            dob: '1998-03-18',
+            source: 'jjgirls, javdatabase',
+            saved: true,
+        },
+    ];
+
+    const [idolsFound, setIdolsFound] = useState<any[]>(searchResult);
     const [searchingModelName, setSearchingModelName] = useState<string>('');
     useEffect(() => {
         const navText = ["<i class='uil uil-angle-left'></i>", "<i class='uil uil-angle-right'></i>"];
@@ -300,13 +332,9 @@ const Explore = () => {
                     console.log(`JavDatabase Exists: ${isJavDatabaseExists}`);
                     console.log(`JJGirls Exists: ${isJJGirlsExists}`);
                     if (isJavDatabaseExists) {
-                        fetch(`http://localhost:3001/api/scrape?modelName=${queryName}`)
-                            .then((res) => {
-                                console.log(res.ok);
-                                return res;
-                            })
-                            .then((html) => console.log(html))
-                            .catch((err) => console.error('Fetch error:', err));
+                        searchModelProfile(modelName).then((data) => {
+                            setIdolsFound(data.map((e: any) => toViewData(e)));
+                        });
                     }
                 }
             }
@@ -341,35 +369,18 @@ const Explore = () => {
         });
     }
 
-    const searchResult = [
-        {
-            name: 'nodoka-sakuraha',
+    function toViewData(item: any) {
+        console.log('toViewData', item);
+        return {
+            name: item.name,
             country: 'japan',
-            height: 155,
-            measurement: '90-57-88',
-            dob: '1999-02-14',
-            metadata: 'jjgirls, javdatabase',
-            saved: false,
-        },
-        {
-            name: 'hikaru-nagi',
-            country: 'japan',
-            height: 162,
-            measurement: '105-59-88',
-            dob: '1997-04-06',
-            metadata: 'javdatabase',
+            height: item.height?.replace(' cm', '') ? parseInt(item.height.replace(' cm', '')) : 0,
+            measurement: item.measurement,
+            dob: item.dob,
+            source: 'jjgirls, javdatabase',
             saved: true,
-        },
-        {
-            name: 'eimi-fukada',
-            country: 'japan',
-            height: 158,
-            measurement: '85-59-91',
-            dob: '1998-03-18',
-            metadata: 'jjgirls, javdatabase',
-            saved: true,
-        },
-    ];
+        };
+    }
 
     return (
         <>
@@ -392,8 +403,9 @@ const Explore = () => {
                                 </div>
                             </div>
                             <div className={styles['search-result']} style={{ display: 'flex', flexDirection: 'row' }}>
-                                {searchResult.length > 0 &&
-                                    searchResult.map((item, index) => {
+                                {idolsFound.length > 0 &&
+                                    idolsFound.map((item, index) => {
+                                        console.log('[item]', item);
                                         return <SearchingCard key={item.name} {...item} />;
                                     })}
                             </div>

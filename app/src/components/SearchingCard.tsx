@@ -1,4 +1,5 @@
 function displayName(name: string) {
+    console.log('displayName', name);
     return name
         .split('-')
         .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
@@ -15,7 +16,7 @@ const SearchingCard = (item: any) => {
                 <div className="fcrse_img" style={{ width: 'auto', padding: '5px' }}>
                     <img
                         style={{ height: '230px', width: '200px', objectFit: 'cover' }}
-                        src={`https://www.javdatabase.com/idolimages/full/${item.name}.webp`}
+                        src={`http://localhost:3001/images/idol-avatars/${item.name}-avatar.jpg`}
                         alt=""
                     />
                 </div>
@@ -59,7 +60,7 @@ const SearchingCard = (item: any) => {
                             <strong>Date of Birth:</strong> {item.dob}
                         </p>
                         <p>
-                            <strong>Metadata:</strong> {item.metadata}
+                            <strong>Source:</strong> {item.source}
                         </p>
                     </div>
                 </div>
