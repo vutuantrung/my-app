@@ -20,36 +20,20 @@ async function crawlIdol(name) {
 
 	const treatedAttr = [];
 	while (true) {
+		console.log("\n\n")
 		await sleep(1000);
 		// Get from the second page
-		const url = `https://www.javdatabase.com/idols/${name}/?ipage=${pageCount}`;
-		console.log("start with url:", url)
-		// await fetch(url, {
-		// 	"headers": {
-		// 		"accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-		// 		"Referrer-Policy": "strict-origin-when-cross-origin"
-		// 	},
-		// 	"body": null,
-		// 	"method": "GET"
-		// })
-		// 	.then(response => response.text())
-		// 	.then((htmlContent) => {
-		// 		htmlContentRoot = htmlContent;
-		// 	})
-		// 	.catch((err) => console.error(err));
-
 		const htmlFilePath = path.join(CACHED_FOLDER, name + "_" + pageCount + ".html");
+		const url = `https://www.javdatabase.com/idols/${name}/?ipage=${pageCount}`;
 		if (fs.existsSync(htmlFilePath)) {
 			console.log("File already exists:", htmlFilePath);
 			htmlContentRoot = fs.readFileSync(htmlFilePath, "utf-8");
 		} else {
-			await axios(url, {
+			await axios.get(url, {
 				"headers": {
 					"accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
 					"Referrer-Policy": "strict-origin-when-cross-origin"
-				},
-				"body": null,
-				"method": "GET"
+				}
 			})
 				.then(response => {
 					if (response.status !== 200) {
@@ -58,7 +42,9 @@ async function crawlIdol(name) {
 					htmlContentRoot = response.data;
 					fs.writeFileSync(htmlFilePath, htmlContentRoot);
 				})
-				.catch((err) => console.error(err));
+				.catch((err) => {
+					console.log(err.message)
+				});
 		}
 		// Get the root
 		const root = parse(htmlContentRoot);
@@ -93,7 +79,7 @@ async function crawlIdol(name) {
 				}
 
 				for (let i = 0; i < treatedAttr.length; i++) {
-					console.log(treatedAttr[i])
+					// console.log(treatedAttr[i])
 					if (i === 0) {
 						treatedAttr[i] = "Name:" + treatedAttr[i].replace("- JAV Profile", "").trim();
 						// data.name = treatedAttr[i].replace("- JAV Profile", "").trim();
@@ -154,7 +140,17 @@ async function crawlIdol(name) {
 			if (!data.movies) {
 				data.movies = [];
 			}
+			if (!root) console.log("root is null")
+
+			if (htmlFilePath.includes("aika_12")) {
+				const listNodeWrapper = root?.querySelector("div[class='facetwp-template']");
+				if (!listNodeWrapper) console.log("listNodeWrapper is null")
+				console.log(listNodeWrapper.childNodes)
+				const listNodeTest = listNodeWrapper?.querySelector("div[class='row']");
+				if (!listNodeTest) console.log("listNodeTest is null")
+			}
 			const listNode = root?.querySelector(".facetwp-template > .row");
+			if (!listNode) console.log("listNode is null")
 			const isEndListReached = listNode.innerText.trim() === "No censored movies found.";
 			if (isEndListReached) {
 				break;

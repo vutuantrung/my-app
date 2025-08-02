@@ -34,13 +34,11 @@ async function crawlMovie(movieCode) {
 		console.log("File already exists:", htmlFilePath);
 		htmlContentRoot = fs.readFileSync(htmlFilePath, "utf-8");
 	} else {
-		await axios(url, {
-			"method": "GET",
+		await axios.get(url, {
 			"headers": {
 				"accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
 				"Referrer-Policy": "strict-origin-when-cross-origin"
-			},
-			"body": null
+			}
 		})
 			.then(response => {
 				if (response.status !== 200) {
