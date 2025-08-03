@@ -48,94 +48,94 @@ const targetDB = new sqlite3.Database('./database/my-db');
 // const targetDB = new sqlite3.Database('./target.db');
 
 function migrateTable(tableName, keyField) {
-	sourceDB.all(`SELECT * FROM ${tableName}`, [], (err, rows) => {
-		if (err) return console.error(`Error reading ${tableName} from source:`, err.message);
+    sourceDB.all(`SELECT * FROM ${tableName}`, [], (err, rows) => {
+        if (err) return console.error(`Error reading ${tableName} from source:`, err.message);
 
-		for (const row of rows) {
-			const keyValue = row[keyField];
-			const { updated_time } = row;
+        for (const row of rows) {
+            const keyValue = row[keyField];
+            const { updated_time } = row;
 
-			targetDB.get(`SELECT updated_time FROM ${tableName} WHERE ${keyField} = ?`, [keyValue], (err, targetRow) => {
-				if (err) return console.error(`Error checking ${tableName} in target:`, err.message);
+            targetDB.get(`SELECT updated_time FROM ${tableName} WHERE ${keyField} = ?`, [keyValue], (err, targetRow) => {
+                if (err) return console.error(`Error checking ${tableName} in target:`, err.message);
 
-				const rowTime = new Date(updated_time);
-				const targetTime = targetRow ? new Date(targetRow.updated_time) : null;
+                const rowTime = new Date(updated_time);
+                const targetTime = targetRow ? new Date(targetRow.updated_time) : null;
 
-				if (!targetRow || rowTime > targetTime) {
-					const columns = Object.keys(row).filter(k => k !== 'id');
-					const values = columns.map(k => row[k]);
+                if (!targetRow || rowTime > targetTime) {
+                    const columns = Object.keys(row).filter(k => k !== 'id');
+                    const values = columns.map(k => row[k]);
 
-					if (!columns.includes('created_time')) {
-						columns.push('created_time');
-						values.push(Date.now())
-					}
+                    if (!columns.includes('created_time')) {
+                        columns.push('created_time');
+                        values.push(Date.now())
+                    }
 
-					if (!columns.includes('updated_time')) {
-						columns.push('updated_time');
-						values.push(Date.now())
-					}
+                    if (!columns.includes('updated_time')) {
+                        columns.push('updated_time');
+                        values.push(Date.now())
+                    }
 
-					const placeholders = columns.map(() => '?').join(', ');
-					const updateSet = columns.map(k => `${k} = ?`).join(', ');
+                    const placeholders = columns.map(() => '?').join(', ');
+                    const updateSet = columns.map(k => `${k} = ?`).join(', ');
 
-					if (!targetRow) {
-						const sql = `INSERT INTO ${tableName} (${columns.join(', ')}) VALUES (${placeholders})`;
-						targetDB.run(sql, values, err => {
-							if (err) console.error(`Insert failed for ${keyValue} in ${tableName}:`, err.message);
-							else console.log(`✅ Inserted ${keyValue} in ${tableName}`);
-						});
-					} else {
-						const sql = `UPDATE ${tableName} SET ${updateSet} WHERE ${keyField} = ?`;
-						targetDB.run(sql, [...values, keyValue], err => {
-							if (err) console.error(`Update failed for ${keyValue} in ${tableName}:`, err.message);
-							else console.log(`🔄 Updated ${keyValue} in ${tableName}`);
-						});
-					}
-				}
-			});
-		}
-	});
+                    if (!targetRow) {
+                        const sql = `INSERT INTO ${tableName} (${columns.join(', ')}) VALUES (${placeholders})`;
+                        targetDB.run(sql, values, err => {
+                            if (err) console.error(`Insert failed for ${keyValue} in ${tableName}:`, err.message);
+                            else console.log(`✅ Inserted ${keyValue} in ${tableName}`);
+                        });
+                    } else {
+                        const sql = `UPDATE ${tableName} SET ${updateSet} WHERE ${keyField} = ?`;
+                        targetDB.run(sql, [...values, keyValue], err => {
+                            if (err) console.error(`Update failed for ${keyValue} in ${tableName}:`, err.message);
+                            else console.log(`🔄 Updated ${keyValue} in ${tableName}`);
+                        });
+                    }
+                }
+            });
+        }
+    });
 }
 
 function moveDatabase(tableName) {
-	return new Promise((resolve, reject) => {
-		sourceDB.all(`SELECT * FROM ${tableName}`, [], (err, rows) => {
-			if (err) return reject(err);
+    return new Promise((resolve, reject) => {
+        sourceDB.all(`SELECT * FROM ${tableName}`, [], (err, rows) => {
+            if (err) return reject(err);
 
-			if (rows.length === 0) {
-				console.log(`No records found in ${tableName} (source).`);
-				return resolve();
-			}
+            if (rows.length === 0) {
+                console.log(`No records found in ${tableName} (source).`);
+                return resolve();
+            }
 
-			targetDB.serialize(() => {
-				targetDB.run("BEGIN TRANSACTION");
+            targetDB.serialize(() => {
+                targetDB.run("BEGIN TRANSACTION");
 
-				const stmt = targetDB.prepare(`
+                const stmt = targetDB.prepare(`
                     INSERT OR IGNORE INTO idol_movie (idol_name, movie_code)
                     VALUES (?, ?)
                 `);
 
-				for (const row of rows) {
-					stmt.run([row.idol_name, row.movie_code], err => {
-						if (err) console.error("Insert failed:", err.message);
-					});
-				}
+                for (const row of rows) {
+                    stmt.run([row.idol_name, row.movie_code], err => {
+                        if (err) console.error("Insert failed:", err.message);
+                    });
+                }
 
-				stmt.finalize();
-				targetDB.run("COMMIT", err => {
-					if (err) return reject(err);
-					console.log(`✅ Copied ${rows.length} records from source → target.`);
-					resolve();
-				});
-			});
-		});
-	});
+                stmt.finalize();
+                targetDB.run("COMMIT", err => {
+                    if (err) return reject(err);
+                    console.log(`✅ Copied ${rows.length} records from source → target.`);
+                    resolve();
+                });
+            });
+        });
+    });
 }
 
 function migrateAll() {
-	migrateTable('idol_profile', 'name');
-	migrateTable('movie', 'code');
-	moveDatabase('idol_movie');
+    migrateTable('idol_profile', 'name');
+    migrateTable('movie', 'code');
+    moveDatabase('idol_movie');
 }
 
 migrateAll();

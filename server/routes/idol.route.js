@@ -37,10 +37,10 @@ router.delete('/:id', (req, res) => {
 // SEARCH
 router.post('/search', async (req, res) => {
     try {
-        const { name } = req.body;
+        const { name, updateRecord } = req.body;
         const curName = treatIdolName(name);
-        console.log("[IdolName]", curName)
-        // Todo:
+        console.log("[IdolName]", curName);
+
         // 1. search in db
         const idolsFound = await idolDbServices.searchIdolsByName(curName);
         // console.log('[idolsFound]', idolsFound);
@@ -48,7 +48,7 @@ router.post('/search', async (req, res) => {
         if (idolsFound.err) {
             throw new Error(err.message);
         }
-        if (idolsFound.data.length > 0) {
+        if (idolsFound.data.length > 0 && !updateRecord) {
             // return idolsFound.data;
             res.status(200).send(JSON.stringify(idolsFound.data));
             return;
@@ -112,8 +112,14 @@ router.post('/search', async (req, res) => {
 
         // 5. save to db
         // 5.1 save idol
-        const createIdolResult = await idolDbServices.createIdols([idol]);
-        console.log('[createIdolResult]', createIdolResult)
+        if (idolsFound.data.length > 0) {
+            const updateIdolResult = await idolDbServices.updateIdolByName(curName, idol);
+            console.log('[updateIdolResult]', updateIdolResult)
+        } else {
+            const createIdolResult = await idolDbServices.createIdols([idol]);
+            console.log('[createIdolResult]', createIdolResult)
+        }
+
         // 5.2 save movie(s)
         const createMoviesResult = await movieDbServices.createMovies(movies);
         console.log('[createMoviesResult]', createMoviesResult)

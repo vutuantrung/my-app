@@ -15,7 +15,7 @@ async function searchMovieByCode(code) {
     let params = [];
 
     if (terms.length > 0) {
-        const orClause = terms.map(() => 'code LIKE ?').join(' OR ');
+        const orClause = terms.map(() => 'code = ?').join(' OR ');
         query += ` WHERE ${orClause}`;
         params = terms.map(term => `%${term}%`);
     }
@@ -23,7 +23,7 @@ async function searchMovieByCode(code) {
     return new Promise((resolve, reject) => {
         db.all(query, params, (err, rows) => {
             if (err) {
-                console.log('[searchMoviesByCode]', err.message)
+                console.log('[searchMoviesByCode]', `Search failed: ${err.message}`)
                 resolve({ err: err.message });
             }
             // console.log(rows)
@@ -47,7 +47,10 @@ async function createMovies(movies) {
             VALUES ${createPropertiesValues(properties)}`);
             for (const movie of movies) {
                 stmt.run(createRecordArrayByPropertyName(properties, movie), err => {
-                    if (err) reject(`Insert failed: ${err.message}`);
+                    if (err) {
+                        console.log('[createMovies]', `Create failed: ${err.message}`)
+                        reject(`Create failed: ${err.message}`);
+                    };
                 });
             }
             stmt.finalize();

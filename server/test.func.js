@@ -131,20 +131,19 @@ function downloadImage(url, filepath) {
 //     console.log(result)
 // }
 
-const { parseDocument } = require('htmlparser2');
-const { DomUtils } = require('htmlparser2');
-const { parse } = require('node-html-parser');
-const { selectOne, selectAll } = require('css-select');
-
-// Read your HTML file
-const html = fs.readFileSync('./database/cached/aika_12.html', 'utf-8');
-const dom = parseDocument(html);
-
-// First, find the parent .row
-const faceTemplateEle = selectOne('.facetwp-template', dom);
-
-// Now, query inside that row only
-const rows = selectOne('.card-body a', faceTemplateEle);
-rows.forEach((link) => {
-    console.log(link.attribs.href, '-', link.children[0].data); // href and text
-});
+const testobj = {
+    name: 'fuua-kaede',
+    dob: '2001-03-30',
+    measurements: '93-59-88',
+    height: '170 cm',
+    country: '?',
+    cup: 'F',
+    movies_count: '169',
+    note: '4.50/5',
+    favorite: '152',
+    my_favorite: 0,
+    jp: '楓ふうあ',
+    created_time: 1754236361082,
+    updated_time: 1754236361082,
+    metadata: '{"avatar":"https://www.javdatabase.com/idolimages/full/fuua-kaede.webp","age":"24","debut":"2021-08-13","sign":"Aries","blood":"?","shoe_size":"?","hair_length":"Long","hair_color":"Brown","tags":"birth_year:2001.00,2001.00|debut_year:2021.00,2021.00|debut_age:20.00,20.00|starsign:aries|cup_size:f|height:170.00,170.00|hair_length:long|hair_color:brown|age_group:twenties"}'
+}
