@@ -49,24 +49,24 @@ function execute() {
     }
 }
 
-const client = require('https');
-const { getLastFolder, isValidImageURL, } = require("./features/jjgirls/jjgirls.utils");
-const { downloadImageByUrl } = require("./helpers");
-function downloadImage(url, filepath) {
-    return new Promise((resolve, reject) => {
-        client.get(url, (res) => {
-            if (res.statusCode === 200) {
-                res.pipe(fs.createWriteStream(filepath))
-                    .on('error', reject)
-                    .once('close', () => resolve(filepath));
-            } else {
-                // Consume response data to free up memory
-                res.resume();
-                reject(new Error(`Request Failed With a Status Code: ${res.statusCode}`));
-            }
-        });
-    });
-}
+// const client = require('https');
+// const { getLastFolder, isValidImageURL, } = require("./features/jjgirls/jjgirls.utils");
+// const { downloadImageByUrl } = require("./helpers");
+// function downloadImage(url, filepath) {
+//     return new Promise((resolve, reject) => {
+//         client.get(url, (res) => {
+//             if (res.statusCode === 200) {
+//                 res.pipe(fs.createWriteStream(filepath))
+//                     .on('error', reject)
+//                     .once('close', () => resolve(filepath));
+//             } else {
+//                 // Consume response data to free up memory
+//                 res.resume();
+//                 reject(new Error(`Request Failed With a Status Code: ${res.statusCode}`));
+//             }
+//         });
+//     });
+// }
 
 ///// TESTING INSERT OR IGNORE MULTIPLE RECORDS IN DB
 // const sqlite3 = require('sqlite3').verbose();
@@ -147,3 +147,5 @@ const testobj = {
     updated_time: 1754236361082,
     metadata: '{"avatar":"https://www.javdatabase.com/idolimages/full/fuua-kaede.webp","age":"24","debut":"2021-08-13","sign":"Aries","blood":"?","shoe_size":"?","hair_length":"Long","hair_color":"Brown","tags":"birth_year:2001.00,2001.00|debut_year:2021.00,2021.00|debut_age:20.00,20.00|starsign:aries|cup_size:f|height:170.00,170.00|hair_length:long|hair_color:brown|age_group:twenties"}'
 }
+
+console.log("ssi-123".slice(0, 2));

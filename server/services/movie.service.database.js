@@ -1,8 +1,8 @@
 
 const db = require("../database/db");
-const { createPropertiesCREATEColumns, createPropertiesValues, createRecordArrayByPropertyName } = require("../helpers");
+const { createPropertiesCREATEColumns, createPropertiesValues, createRecordArrayByPropertyName, createPropertiesUPDATEColumns } = require("../helpers");
 
-const properties = ["code", "title", "studio", "release_date", "runtime", "note", "favorite", "my_favorite", "thumbs_short", "thumbs", "images", "created_time", "updated_time", "metadata"];
+const columns = ["code", "title", "studio", "release_date", "runtime", "note", "favorite", "my_favorite", "thumbs_short", "thumbs", "images", "created_time", "updated_time", "metadata"];
 
 // GET all or search by codes (comma-separated)
 async function searchMovieByCode(code) {
@@ -17,7 +17,7 @@ async function searchMovieByCode(code) {
     if (terms.length > 0) {
         const orClause = terms.map(() => 'code = ?').join(' OR ');
         query += ` WHERE ${orClause}`;
-        params = terms.map(term => `%${term}%`);
+        params = terms;
     }
 
     return new Promise((resolve, reject) => {
@@ -32,6 +32,35 @@ async function searchMovieByCode(code) {
     })
 }
 
+async function searchMovieByFavorite(favorite) {
+    return new Promise((resolve, reject) => {
+        db.all(`SELECT * FROM movie WHERE favorite = ?`, [favorite], (err, rows) => {
+            if (err) return reject(err);
+            resolve({ data: rows });
+        });
+    });
+}
+
+/** my_favorite = 1 */
+async function searchMovieByMyFavorite() {
+    return new Promise((resolve, reject) => {
+        db.all(`SELECT * FROM movie WHERE my_favorite = 1`, [], (err, rows) => {
+            if (err) return reject(err);
+            resolve({ data: rows });
+        });
+    });
+}
+
+/** note LIKE %keyword% (case-insensitive). */
+async function searchMovieByNote(keyword) {
+    return new Promise((resolve, reject) => {
+        db.all(`SELECT * FROM movie WHERE note LIKE ? COLLATE NOCASE`, [`%${keyword}%`], (err, rows) => {
+            if (err) return reject(err);
+            resolve({ data: rows });
+        });
+    });
+}
+
 // GET single by ID
 async function searchMovieById(id) {
     throw new Error("Not implementation exception")
@@ -43,10 +72,10 @@ async function createMovies(movies) {
         db.serialize(() => {
             db.run(`BEGIN TRANSACTION`);
             const stmt = db.prepare(`
-            INSERT OR IGNORE INTO movie ${createPropertiesCREATEColumns(properties)}
-            VALUES ${createPropertiesValues(properties)}`);
+            INSERT OR IGNORE INTO movie ${createPropertiesCREATEColumns(columns)}
+            VALUES ${createPropertiesValues(columns)}`);
             for (const movie of movies) {
-                stmt.run(createRecordArrayByPropertyName(properties, movie), err => {
+                stmt.run(createRecordArrayByPropertyName(columns, movie), err => {
                     if (err) {
                         console.log('[createMovies]', `Create failed: ${err.message}`)
                         reject(`Create failed: ${err.message}`);
@@ -60,13 +89,56 @@ async function createMovies(movies) {
 }
 
 // UPDATE
-async function updateMovie(id, model) {
-    throw new Error("Not implementation exception")
+async function updateMovieById(id, updateData /* Map */) {
+    const { setString, valuesArr } = createPropertiesUPDATEColumns(updateData);
+    return new Promise((resolve, reject) => {
+        db.run(`UPDATE movie SET ${setString} WHERE id = ?`, [...valuesArr, id], function (err) {
+            if (err) {
+                console.log('[updateMovieById]', `Update failed: ${err.message}`);
+                resolve(false);
+            }
+            resolve(true);
+        });
+    });
+}
+
+async function updateMovieByCode(code, updateData /* Map */) {
+    const { setString, valuesArr } = createPropertiesUPDATEColumns(updateData);
+    return new Promise((resolve, reject) => {
+        db.run(
+            `UPDATE movie SET ${setString} WHERE code = ?`,
+            [...valuesArr, code],
+            function (err) {
+                if (err) {
+                    console.log('[updateMovieByCode]', `Update failed: ${err.message}`)
+                    resolve(false);
+                }
+                resolve(true);
+            }
+        );
+    });
 }
 
 // DELETE
-async function deleteMovie(id) {
-    throw new Error("Not implementation exception")
+async function deleteMovieById(id) {
+    return new Promise((resolve, reject) => {
+        db.run(`DELETE FROM movie WHERE id = ?`, [id],
+            function (err) {
+                if (err) {
+                    console.log('[deleteMovieById]', `Delete failed: ${err.messages}`);
+                    resolve(false);
+                }
+                resolve(true);
+            });
+    });
 }
 
-module.exports = { searchMovieByCode, createMovies, createMovies }
+module.exports = {
+    searchMovieByCode,
+    createMovies,
+    updateMovieByCode,
+    deleteMovieById,
+    searchMovieByNote,
+    searchMovieByMyFavorite,
+    searchMovieByFavorite
+}

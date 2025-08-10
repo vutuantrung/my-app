@@ -15,18 +15,18 @@ router.post('/search', async (req, res) => {
     try {
         const { code, updateRecord } = req.body;
         const curCode = treatMovieCode(code);
-        console.log("[MovieCode]", curCode);
+        console.log("[MovieCode]", code);
 
         // 1. search in db
-        const movieFound = await movieDbServices.searchMovieByCode(curCode);
-        // console.log('[movieFound]', movieFound);
+        const moviesFound = await movieDbServices.searchMovieByCode(code);
+        // console.log('[moviesFound]', moviesFound);
         // 2. if has => return
-        if (movieFound.err) {
+        if (moviesFound.err) {
             throw new Error(err.message);
         }
-        if (movieFound.data.length > 0 && !updateRecord) {
+        if (moviesFound.data.length > 0 && !updateRecord) {
             // return movieFound.data;
-            res.status(200).send(JSON.stringify(movieFound.data));
+            res.status(200).send(JSON.stringify(moviesFound.data));
             return;
         }
         // 3. crawl from internet
@@ -38,7 +38,6 @@ router.post('/search', async (req, res) => {
         if (exist) {
             const d = fs.readFileSync(cachedPath, "utf-8");
             movieData = JSON.parse(d);
-            console.log("has data")
         } else {
             movieData = await movieCrawlingServices.crawlMovieByCode(curCode);
         }
@@ -82,8 +81,14 @@ router.post('/search', async (req, res) => {
         const createIdolResult = await idolDbServices.createIdols(idols);
         console.log('[createIdolResult]', createIdolResult)
         // 5.2 save movie
-        const createMoviesResult = await movieDbServices.createMovies([movie]);
-        console.log('[createMoviesResult]', createMoviesResult)
+        if (moviesFound.data.length > 0) {
+            const updateMovieResult = await movieDbServices.updateMovieByCode(code, movie);
+            console.log('[updateMovieResult]', updateMovieResult)
+        } else {
+            const createMoviesResult = await movieDbServices.createMovies([movie]);
+            console.log('[createMoviesResult]', createMoviesResult)
+        }
+
         // 5.3 save idol - movie (s)
         const createIdolMovies = await idolMovieDbServices.createIdolMovies(idolMovies);
         console.log('[createIdolMovies]', createIdolMovies)

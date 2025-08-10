@@ -95,8 +95,8 @@ async function createIdols(idols) {
 
 // UPDATE
 async function updateIdolById(id, idolUpdateData) {
+    const { setString, valuesArr } = createPropertiesUPDATEColumns(idolUpdateData);
     return new Promise((resolve, reject) => {
-        const { setString, valuesArr } = createPropertiesUPDATEColumns(idolUpdateData);
         db.run(`UPDATE idol_profile SET ${setString} WHERE id = ?`,
             [...valuesArr, id],
             function (err) {
@@ -111,8 +111,8 @@ async function updateIdolById(id, idolUpdateData) {
 }
 
 async function updateIdolByName(name, idolUpdateData) {
+    const { setString, valuesArr } = createPropertiesUPDATEColumns(idolUpdateData);
     return new Promise((resolve, reject) => {
-        const { setString, valuesArr } = createPropertiesUPDATEColumns(idolUpdateData);
         db.run(`UPDATE idol_profile SET ${setString} WHERE name = ?`,
             [...valuesArr, name],
             function (err) {
@@ -129,8 +129,7 @@ async function updateIdolByName(name, idolUpdateData) {
 // DELETE
 async function deleteIdolById(id) {
     return new Promise((resolve, reject) => {
-        db.run(`DELETE FROM idol_profile WHERE id = ?`,
-            [id],
+        db.run(`DELETE FROM idol_profile WHERE id = ?`, [id],
             function (err) {
                 if (err) {
                     console.log('[deleteIdolById]', `Delete failed: ${err.messages}`);

@@ -7,7 +7,7 @@ const idolDbServices = require("../services/idol.service.database");
 const movieDbServices = require("../services/movie.service.database");
 const idolMovieDbServices = require("../services/idolMovie.services.database");
 const idolCrawlingServices = require("../services/idol.service.crawl");
-const { treatIdolName } = require("../helpers");
+const { treatIdolName, toMime, updateHTMLTemplate } = require("../helpers");
 
 // CREATE
 router.post('/', (req, res) => {
@@ -44,12 +44,13 @@ router.post('/search', async (req, res) => {
         // 1. search in db
         const idolsFound = await idolDbServices.searchIdolsByName(curName);
         // console.log('[idolsFound]', idolsFound);
+
         // 2. if has => return
         if (idolsFound.err) {
             throw new Error(err.message);
         }
         if (idolsFound.data.length > 0 && !updateRecord) {
-            // return idolsFound.data;
+            // Todo: search movies thumbs (8 movies)
             res.status(200).send(JSON.stringify(idolsFound.data));
             return;
         }
@@ -62,7 +63,6 @@ router.post('/search', async (req, res) => {
         if (exist) {
             const d = fs.readFileSync(cachedPath, "utf-8");
             idolData = JSON.parse(d);
-            console.log("has data")
         } else {
             idolData = await idolCrawlingServices.crawlIdolByName(curName);
         }
@@ -125,9 +125,12 @@ router.post('/search', async (req, res) => {
         console.log('[createMoviesResult]', createMoviesResult)
         // 5.3 save idol - movie (s)
         const createIdolMovies = await idolMovieDbServices.createIdolMovies(idolMovies);
-        console.log('[createIdolMovies]', createIdolMovies)
+        console.log('[createIdolMovies]', createIdolMovies);
 
-        res.status(200).send(JSON.stringify([idol]));
+
+        const htmlDisplayString = updateHTMLTemplate(idol, movies);
+
+        res.status(200).send(htmlDisplayString);
     } catch (error) {
         console.error(error);
         res.status(500).send(error.message);
@@ -138,6 +141,17 @@ router.post('/setIdolAvatar', async (req, res) => {
     const { url, idolName } = req.body;
     const saveImageSuccess = idolCrawlingServices.setAvatar(url, idolName);
     res.status(200).send({ success: saveImageSuccess });
+})
+
+router.post('/test', async (req, res) => {
+    const imagePath = "./test/testReturn.html";
+    const abs = path.resolve(imagePath);
+    const htmlString = fs.readFileSync(imagePath, "utf-8");
+    const b64 = fs.readFileSync("./database/idol-avatars/ren-gojo-avatar.jpg", "base64");
+    const mime = toMime(path.extname(abs));
+    const dataUri = `data:${mime};base64,${b64}`;
+    const result = htmlString.replace("#SCR_B64#", dataUri)
+    res.send(result);
 })
 
 module.exports = router;
