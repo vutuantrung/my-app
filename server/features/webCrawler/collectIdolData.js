@@ -2,9 +2,10 @@
 
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
 const { sleep, downloadImageByUrl } = require("../../helpers")
 const { parse } = require('node-html-parser');
-const { extractText, extractRawNamesIdol, parseUsingOtherPackage } = require('./webCrawler.utils');
+const { extractText, extractRawNamesIdol } = require('./webCrawler.utils');
 const { default: axios } = require('axios');
 const { CACHED_FOLDER, IDOL_AVATAR_FOLDER } = require('../../constants');
 const { parseDocument } = require('htmlparser2');
@@ -32,22 +33,25 @@ async function crawlIdol(name) {
             htmlContentRoot = fs.readFileSync(htmlFilePath, "utf-8");
         } else {
             console.log("🔥 Gonna crawl from url:", url);
-            await axios.get(url, {
-                "headers": {
-                    "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-                    "Referrer-Policy": "strict-origin-when-cross-origin"
-                }
-            })
-                .then(response => {
-                    if (response.status !== 200) {
-                        throw new Error(`Failed to fetch data for model ${name}. Status: ${response.status}`);
+            try {
+                const res = await axios.get(url, {
+                    "headers": {
+                        "Referrer-Policy": "strict-origin-when-cross-origin"
                     }
-                    htmlContentRoot = response.data;
-                    fs.writeFileSync(htmlFilePath, htmlContentRoot);
-                })
-                .catch((err) => {
-                    console.log(err.message)
                 });
+
+                if (res.status !== 200) {
+                    throw new Error(`Failed to fetch data for model ${name}. Status: ${response.status}`);
+                }
+
+                htmlContentRoot = res.data;
+                fs.writeFileSync(htmlFilePath, htmlContentRoot);
+            } catch (error) {
+                console.error(error.message);
+                if (error.status === 404) {
+                    return null;
+                }
+            }
         }
         // Get the root
         const root = parse(htmlContentRoot);
@@ -138,20 +142,13 @@ async function crawlIdol(name) {
             personalDataCollected = true;
         }
 
-        //// GET MOVIES DATA
+        //// GET CENSORED MOVIES DATA
         {
             if (!data.movies) {
                 data.movies = [];
             }
-            if (!root) console.log("root is null")
+            if (!root) console.log("root is null");
 
-            // if (htmlFilePath.includes("aika_12")) {
-            //     const listNodeWrapper = root?.querySelector("div[class='facetwp-template']");
-            //     if (!listNodeWrapper) console.log("listNodeWrapper is null")
-            //     console.log(listNodeWrapper.childNodes)
-            //     const listNodeTest = listNodeWrapper?.querySelector("div[class='row']");
-            //     if (!listNodeTest) console.log("listNodeTest is null")
-            // }
             let listNode = root?.querySelector(".facetwp-template > .row");
             if (!listNode) {
                 console.log("listNode element cannot parse -> using trick")
@@ -194,7 +191,7 @@ async function crawlIdol(name) {
                     actress: null,
                     note: null,
                     thumbs: null
-                })
+                });
             }
 
             data.movies = [...data.movies, ...newMovies];
@@ -237,12 +234,90 @@ async function crawlIdol(name) {
         }
     }
 
+    //// CRAWL UNCENSORED MOVIES
+    pageCount = 1;
+    while (true) {
+        await sleep(1000);
+        // Get from the second page
+        const htmlFilePath = path.join(CACHED_FOLDER, name + "_" + pageCount + "_uncensored.html");
+        const url = `https://www.javdatabase.com/idol-uncensored-movies/page/${pageCount}/?idol=${name}`;
+        if (fs.existsSync(htmlFilePath)) {
+            console.log("✔️ File already exists:", htmlFilePath);
+            htmlContentRoot = fs.readFileSync(htmlFilePath, "utf-8");
+        } else {
+            console.log("🔥 Gonna crawl from url:", url);
+            try {
+                const res = await axios.get(url, {
+                    "headers": {
+                        "Referrer-Policy": "strict-origin-when-cross-origin"
+                    }
+                });
+
+                if (res.status !== 200) {
+                    throw new Error(`Failed to fetch data for model ${name}. Status: ${response.status}`);
+                }
+
+                htmlContentRoot = res.data;
+                fs.writeFileSync(htmlFilePath, htmlContentRoot);
+            } catch (error) {
+                console.error(error.message);
+                break;
+            }
+        }
+
+        const root = parse(htmlContentRoot);
+        if (!data.movies) {
+            data.movies = [];
+        }
+        if (!root) console.log("root is null");
+
+        let listNode = root?.querySelector("#primary > .row");
+        const isEndListReached = listNode.innerText.trim().includes("No uncensored movies for this idol.");
+        if (isEndListReached) {
+            break;
+        }
+
+        const newMovies = [];
+        const cardNodes = listNode.querySelectorAll(".card");
+        for (const cardNode of cardNodes) {
+            const title = cardNode.querySelector("p[class='display-6 pcard']").innerText.trim().replaceAll("\r\n", "").replace(/ +/g, " ");
+            // console.log(JSON.stringify(cardNode.querySelector("p[class='display-6 pcard']").innerText));
+            // console.log('[code]', code)
+            const movieLink = cardNode.querySelector("p[class='display-6 pcard'] > a[class='cut-text']").getAttribute("href")
+            // console.log('[movieLink]', movieLink)
+            const thumbsNode = cardNode.querySelector("div[class='movie-cover-thumb'] > a > img");
+            // console.log('[thumbsSrc]', thumbsNode.getAttribute('src').replace("/thumb/", "/full/").replace("ps.webp", "pl.webp"))
+            const releasedDateNode = cardNode.querySelector("div[class='mt-auto']").innerText.trim().replaceAll("\t", "").replaceAll("\n", "").replace(/ +/g, " ");
+
+            newMovies.push({
+                code: crypto.createHash('md5').update(movieLink).digest('hex'),
+                movieLink: movieLink,
+                thumbsShort: thumbsNode.getAttribute('src'),
+                thumbs: "",
+                desc: "",
+                releaseDate: releasedDateNode,
+                title: title,
+                genres: null,
+                studio: null,
+                trailer: null,
+                runtime: null,
+                favorite: null,
+                actress: null,
+                note: null,
+                thumbs: null
+            });
+        }
+        data.movies = [...data.movies, ...newMovies];
+        pageCount++;
+
+    }
+
     if (Array.isArray(data.collectMore)) {
         const hrefSets = Array.from(new Set(data.collectMore));
         data.collectMore = hrefSets;
     }
 
-    // console.log(data);
+    // console.log(data.movies);
 
     // download idol avatar
     await downloadImageByUrl(data.avatar, IDOL_AVATAR_FOLDER, name + "-avatar.jpg");

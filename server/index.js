@@ -35,6 +35,11 @@ const movieRoutes = require('./routes/movie.route.js');
 
 app.use('/api/movie', movieRoutes);
 
+app.post('/test', (req, res) => {
+    console.log("in test.....");
+    res.status(200).send(JSON.stringify({ data: "qwe" }))
+})
+
 app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
 });

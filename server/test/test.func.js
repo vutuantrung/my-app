@@ -38,19 +38,15 @@ const urls = [
     "https://www.javdatabase.com/idols/rara-anzai/"
 ];
 
-function execute() {
-    for (const url of urls) {
-        const decodeUrl = decodeURIComponent(url);
-        const reg = /https:\/\/www\.javdatabase\.com\/idols\/\?_(?<tag_name>.*)=(?<tag_val>.*)/;
-        const match = decodeUrl.match(reg);
-        if (match?.groups) {
-            console.log(match.groups.tag_name, match.groups.tag_val);
-        }
-    }
+const { getJJGirlsImageIndex } = require("../features/jjgirls/jjgirls.utils.js")
+
+async function execute() {
+    const res = await getJJGirlsImageIndex("ryo-shinohara");
+    console.log(res);
 }
 
 // const client = require('https');
-// const { getLastFolder, isValidImageURL, } = require("./features/jjgirls/jjgirls.utils");
+// const { getJJGirlsImageIndex, isValidImageURL, } = require("./features/jjgirls/jjgirls.utils");
 // const { downloadImageByUrl } = require("./helpers");
 // function downloadImage(url, filepath) {
 //     return new Promise((resolve, reject) => {
@@ -130,22 +126,55 @@ function execute() {
 //     const result = await downloadImageByUrl("https://japanesebeauties.one/japanese/shoko-takahashi/56/shoko-takahashi-5.jpg", "database/idol-avatars");
 //     console.log(result)
 // }
+const crypto = require('crypto');
+const { parse } = require('node-html-parser');
+function check() {
+    const htmlContentString = fs.readFileSync("./test/test.html", "utf-8");
+    const root = parse(htmlContentString);
 
-const testobj = {
-    name: 'fuua-kaede',
-    dob: '2001-03-30',
-    measurements: '93-59-88',
-    height: '170 cm',
-    country: '?',
-    cup: 'F',
-    movies_count: '169',
-    note: '4.50/5',
-    favorite: '152',
-    my_favorite: 0,
-    jp: '楓ふうあ',
-    created_time: 1754236361082,
-    updated_time: 1754236361082,
-    metadata: '{"avatar":"https://www.javdatabase.com/idolimages/full/fuua-kaede.webp","age":"24","debut":"2021-08-13","sign":"Aries","blood":"?","shoe_size":"?","hair_length":"Long","hair_color":"Brown","tags":"birth_year:2001.00,2001.00|debut_year:2021.00,2021.00|debut_age:20.00,20.00|starsign:aries|cup_size:f|height:170.00,170.00|hair_length:long|hair_color:brown|age_group:twenties"}'
+    let listNode = root?.querySelector("#primary > .row");
+    const isEndListReached = listNode.innerText.trim().includes("No uncensored movies for this idol.");
+    if (isEndListReached) {
+        console.log("reach end");
+        return;
+    }
+
+    const newMovies = [];
+    const cardNodes = listNode.querySelectorAll(".card");
+    for (const cardNode of cardNodes) {
+        const title = cardNode.querySelector("p[class='display-6 pcard']").innerText.trim().replaceAll("\r\n", "").replace(/ +/g, " ");
+        // console.log(JSON.stringify(cardNode.querySelector("p[class='display-6 pcard']").innerText));
+        // console.log('[code]', code)
+        const movieLink = cardNode.querySelector("p[class='display-6 pcard'] > a[class='cut-text']").getAttribute("href")
+        // console.log('[movieLink]', movieLink)
+        const thumbsNode = cardNode.querySelector("div[class='movie-cover-thumb'] > a > img");
+        // console.log('[thumbsSrc]', thumbsNode.getAttribute('src').replace("/thumb/", "/full/").replace("ps.webp", "pl.webp"))
+        const releasedDateNode = cardNode.querySelector("div[class='mt-auto']").innerText.trim().replaceAll("\t", "").replaceAll("\n", "").replace(/ +/g, " ");
+
+        console.log('\n');
+        console.log(title);
+        console.log(movieLink);
+        // console.log(thumbsNode.getAttribute('src'));
+        // console.log(releasedDateNode);
+
+        const hashed = crypto.createHash('md5').update(movieLink).digest('hex');
+        const data = {
+            code: crypto.createHash('md5').update(movieLink).digest('hex'),
+            movieLink: movieLink,
+            thumbsShort: thumbsNode.getAttribute('src'),
+            thumbs: "",
+            desc: "",
+            releaseDate: releasedDateNode,
+            title: title,
+            genres: null,
+            studio: null,
+            trailer: null,
+            runtime: null,
+            favorite: null,
+            actress: null,
+            note: null,
+            thumbs: null
+        };
+        console.log(data.code === hashed);
+    }
 }
-
-console.log("ssi-123".slice(0, 2));

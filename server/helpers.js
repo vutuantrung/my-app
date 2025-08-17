@@ -1,9 +1,11 @@
 const axios = require('axios');
 const path = require("path");
 const fs = require("fs");
+const crypto = require('crypto');
 const { default: parse } = require('node-html-parser');
 const { default: render } = require('dom-serializer');
 const { CLIENT_RENEG_LIMIT } = require('tls');
+const { getTotalImages, generateRandomUrls } = require('./features/jjgirls/jjgirls.utils');
 
 function secondsToHms(d) {
     d = Number(d);
@@ -155,7 +157,10 @@ function updateHTMLTemplate(idolData, moviesData) {
     const idolMetadata = JSON.parse(idolData.metadata)
 
     // avatar
-    const imagePath = `./database/idol-avatars/${idolData.name}-avatar.jpg`;
+    let imagePath = `./database/idol-avatars/${idolData.name}-avatar.jpg`;
+    if (!fs.existsSync(imagePath)) {
+        imagePath = `./database/idol-avatars/anonymous.png`;
+    }
     const abs = path.resolve(imagePath);
     const b64 = fs.readFileSync(imagePath, "base64");
     const mime = toMime(path.extname(abs));
@@ -182,7 +187,7 @@ function updateHTMLTemplate(idolData, moviesData) {
         biosElement.innerHTML += ele;
     }
 
-    const measurements = `${idolData.measurements} (${idolData.cup})`;
+    const measurements = idolData.measurements ? `${idolData.measurements}` + idolData.cup ? ` (${idolData.cup})` : "" : "";
     if (measurements) {
         const ele = `<div class="bio-info"><span class="label">Measurements</span><span class="value">${measurements}</span></div>`;
         biosElement.innerHTML += ele;
@@ -239,6 +244,16 @@ function updateHTMLTemplate(idolData, moviesData) {
         html.querySelector("div[class='tags']").innerHTML += eleTemplate;
     }
 
+    const jjgirlData = idolMetadata.jjgirlData;
+    if (jjgirlData) {
+        const eleTemplate = `
+            <span id="tag-note" class="tag tag-icon">
+                <img style="height: 25px; margin-right: 5px;" src="https://jjgirls.com/favicon.ico" />
+                <div id="tag-note-val">${getTotalImages(jjgirlData)}</div>
+            </span>`;
+        html.querySelector("div[class='tags']").innerHTML += eleTemplate;
+    }
+
     // links
     const javdatabaseLink = `
         <nav class="links" aria-label="Links">
@@ -248,7 +263,7 @@ function updateHTMLTemplate(idolData, moviesData) {
             </a>
         </nav>`;
     html.querySelector("div[class='links-section']").innerHTML += javdatabaseLink;
-    if (idolData.jjgirlData) {
+    if (idolMetadata.jjgirlData) {
         const jjgirlsLink = `
             <nav class="links" aria-label="Links">
                 <a class="link" href="https://jjgirls.com/japanese/${idolData.name}/1/">
@@ -259,21 +274,34 @@ function updateHTMLTemplate(idolData, moviesData) {
         html.querySelector("div[class='links-section']").innerHTML += jjgirlsLink;
 
         const jjgilrsLinkIcon = `<img style="height: 25px; margin-right: 5px;" src="https://jjgirls.com/favicon.ico" />`;
-        html.querySelector("nav[class='source-links']").innerHTML += jjgilrsLinkIcon;
+        html.querySelector("p[class='source-links']").innerHTML += jjgilrsLinkIcon;
     }
 
-    // movie thumbs
+    // movie thumbs / jjgirl images
     let movieDisplayCount = 1;
     // Todo: shuffle movies array
     const shuffledMoviesData = shuffleArray(moviesData);
-    for (const movie of shuffledMoviesData) {
-        if (movieDisplayCount > 8) break;
-        const imgHtmlString = `<img class="movie-thumbs" src="${movie.thumbs_short}" />`
-        html.querySelector("div[class='gallery']").innerHTML += imgHtmlString;
-        movieDisplayCount++;
+    if (moviesData.length > 0) {
+        for (const movie of shuffledMoviesData) {
+            if (movieDisplayCount > 8) break;
+            const imgHtmlString = `<img class="movie-thumbs" src="${movie.thumbs_short}" />`
+            html.querySelector("div[class='gallery']").innerHTML += imgHtmlString;
+            movieDisplayCount++;
+        }
+    } else if (idolMetadata.jjgirlData) {
+        const imgUrls = generateRandomUrls(idolMetadata.jjgirlData)
+        for (const imgUrl of imgUrls) {
+            const imgHtmlString = `<img class="movie-thumbs" src="${imgUrl}" />`
+            html.querySelector("div[class='gallery']").innerHTML += imgHtmlString;
+        }
     }
 
     return html.toString();
+}
+
+function render404Page() {
+    const htmlTemplateString = fs.readFileSync("./assets/TEMPLATE_404.html", "utf-8");
+    return htmlTemplateString
 }
 
 function shuffleArray(array) {
@@ -282,6 +310,15 @@ function shuffleArray(array) {
         [array[i], array[j]] = [array[j], array[i]];
     }
     return array;
+}
+
+function generateRandomNumber(min, max) {
+    // min and max included
+    return Math.floor(Math.random() * (max - min + 1) + min);
+};
+
+function generateHashedFromString(str) {
+    return crypto.createHash('md5').update(str).digest('hex');
 }
 
 module.exports = {
@@ -295,5 +332,8 @@ module.exports = {
     treatIdolName,
     treatMovieCode,
     toMime,
-    updateHTMLTemplate
+    generateRandomNumber,
+    updateHTMLTemplate,
+    render404Page,
+    generateHashedFromString
 }
