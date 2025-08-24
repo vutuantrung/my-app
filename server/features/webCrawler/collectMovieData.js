@@ -1,35 +1,35 @@
 // Collect data from https://www.javdatabase.com/
+const crypto = require('crypto');
 const path = require('path');
 const fs = require('fs');
 const { parse } = require('node-html-parser');
-const { extractText, extractRawNamesMovie } = require('./webCrawler.utils');
+const { extractText, extractDataFromHref } = require('./webCrawler.utils');
 const { default: axios } = require('axios');
+const { parseDocument } = require('htmlparser2');
+const { selectOne } = require('css-select');
+const render = require("dom-serializer").default;
 const { CACHED_FOLDER, MOVIE_THUMBS_FOLDER } = require('../../constants');
 const { downloadImageByUrl } = require('../../helpers');
 
-async function crawlMovie(movieCode) {
-    let data = {},
-        htmlContentRoot = null;
+async function crawlMovie(movieInfo) {
+    const { code, url } = movieInfo;
+    let data = {}, htmlContentRoot = null;
 
-    const htmlFilePath = path.join(CACHED_FOLDER, movieCode + ".html")
-    const url = `https://www.javdatabase.com/movies/${movieCode}/`;
-    // await fetch(url, {
-    // 	"method": "GET",
-    // 	"headers": {
-    // 		"accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-    // 		"Referrer-Policy": "strict-origin-when-cross-origin"
-    // 	},
-    // 	"body": null
-    // })
-    // 	.then(response => {
-    // 		console.log('[response]', response);
-    // 		return response.text()
-    // 	})
-    // 	.then((htmlContent) => {
-    // 		htmlContentRoot = htmlContent;
-    // 		fs.writeFileSync(filePath, htmlContent);
-    // 	})
-    // 	.catch((err) => console.error(err));
+    // if (movieInfo.movieCode) {
+    //     htmlFilePath = path.join(CACHED_FOLDER, code + ".html")
+    //     url = `https://www.javdatabase.com/movies/${movieCode}/`;
+    //     code = movieInfo.movieCode;
+    // } else if (movieInfo.movieUrl) {
+    //     const hashedName = crypto.createHash('md5').update(movieInfo.movieUrl).digest('hex');
+    //     htmlFilePath = path.join(CACHED_FOLDER, hashedName + ".html");
+    //     url = movieInfo.movieUrl;
+    //     code = hashedName;
+    // } else {
+    //     throw new Error("[crawlMovie] Unsupported crawling mode")
+    // }
+
+    const htmlFilePath = path.join(CACHED_FOLDER, code + ".html")
+
     if (fs.existsSync(htmlFilePath)) {
         console.log("✔️ File already exists:", htmlFilePath);
         htmlContentRoot = fs.readFileSync(htmlFilePath, "utf-8");
@@ -43,7 +43,7 @@ async function crawlMovie(movieCode) {
         })
             .then(response => {
                 if (response.status !== 200) {
-                    throw new Error(`Failed to fetch data for movie code ${movieCode}. Status: ${response.status}`);
+                    throw new Error(`Failed to fetch data for movie code ${code}. Status: ${response.status}`);
                 }
                 htmlContentRoot = response.data;
                 fs.writeFileSync(htmlFilePath, htmlContentRoot);
@@ -55,19 +55,27 @@ async function crawlMovie(movieCode) {
 
     //// GET MOVIE DATA
     {
-        const dataNode = root.querySelector("div[class='movietable'] > div[class='row']");
+        let dataNode = root.querySelector("#main > .entry-content");
+        if (!dataNode) {
+            console.log("dataNode element cannot parse -> using trick")
+            const dom = parseDocument(htmlContentRoot);
+            const entryContentEle = selectOne('#main', dom);
+            const row = selectOne('.entry-content', entryContentEle);
+            dataNode = parse(render(row));
+        }
+        // console.log('[dataNode]', dataNode);
         const allTexts = extractText(dataNode);
         const treatedAttr = [];
-        mainAttrLoop: for (let i = 0; i < allTexts.length; i++) {
+        for (let i = 0; i < allTexts.length; i++) {
             if (allTexts[i].includes("[*]")) {
                 let newAttr = allTexts[i];
-                supAttrLoop: for (let j = i + 1; j < allTexts.length; j++) {
+                for (let j = i + 1; j < allTexts.length; j++) {
                     if (allTexts[j].includes("[*]") || allTexts[j] === "View All Favorites" || j === allTexts.length - 1) {
                         if (newAttr[newAttr.length - 1] === ",") {
                             newAttr = newAttr.slice(0, -1);
                         }
                         treatedAttr.push(newAttr);
-                        break supAttrLoop;
+                        break;
                     }
                     newAttr += allTexts[j] + ",";
                 }
@@ -75,8 +83,11 @@ async function crawlMovie(movieCode) {
         }
 
         for (let i = 0; i < treatedAttr.length; i++) {
+            if (treatedAttr[i].includes("[*]Title:")) {
+                treatedAttr[i] = treatedAttr[i].replaceAll("Title,", "").replaceAll("\r", "").replaceAll("\n", "").replace(/\s\s+/g, ' ').trim();
+            }
             if (treatedAttr[i].includes("[*]Favorite:")) {
-                treatedAttr[i] = treatedAttr[i].replaceAll("Favorite,", "").trim();
+                treatedAttr[i] = treatedAttr[i].replace("Favorite,", "").replaceAll("\r", "").replaceAll("\n", "").replace(/\s\s+/g, ' ').trim();
             }
             if (treatedAttr[i].includes("[*]Idol(s)/Actress(es)")) {
                 treatedAttr[i] = "[*]Actress(es):" + treatedAttr[i].split(":")[1];
@@ -94,9 +105,10 @@ async function crawlMovie(movieCode) {
         const ratingNode = root?.querySelector("div[class='post-ratings']");
         if (ratingNode) {
             const allTexts = extractText(ratingNode);
+            const noRatingText = allTexts[0].replaceAll("\r", "").replaceAll("\n", "").replace(/\s\s+/g, ' ').trim();
             // console.log(allTexts)
-            const note = allTexts[0] === "(No Ratings Yet)"
-                ? "(No Ratings Yet)"
+            const note = noRatingText === "(No Ratings Yet)"
+                ? noRatingText
                 : allTexts.join(" ").replace(")", "").split("average:")[1].replace(" out of ", "/").trim();
             treatedAttr.push("Note: " + note);
             data.note = note;
@@ -104,26 +116,36 @@ async function crawlMovie(movieCode) {
 
         // 3. Movie images
         if (!data.images) data.images = [];
-        const imageNodes = root?.querySelector("div[id='lightboxModal']").parentNode.querySelector("div[class='container']").firstElementChild.children;
-        for (const iNode of imageNodes) {
-            const imgHref = iNode.firstElementChild.getAttribute("data-image-href");
-            data.images.push(imgHref);
+        const imageNodes = root?.querySelector("div[id='lightboxModal']").parentNode.querySelector("div[class='container']")?.firstElementChild.children;
+        if (Array.isArray(imageNodes)) {
+            for (const iNode of imageNodes) {
+                const imgHref = iNode.firstElementChild.getAttribute("data-image-href");
+                data.images.push(imgHref);
+            }
         }
 
         // 4. Movie thumbs
         if (!data.thumbs) {
             data.thumbs = { cover: "", full: "" };
         }
-        const thumbContainer = root?.querySelector("div[id='thumbnailContainer'] > a > img");
-        if (thumbContainer) {
-            const src = thumbContainer.getAttribute("src");
+        const coverThumbContainer = root?.querySelector("div[id='thumbnailContainer'] > a > img");
+        if (coverThumbContainer) {
+            const src = coverThumbContainer.getAttribute("src");
             data.thumbs.cover = src;
-            data.thumbs.full = src.replace("/thumb/", "/full/").replace("ps.webp", "pl.webp");
         }
-    }
+        const fullThumbContainer = root?.querySelector("div[id='poster-container'] > a > img");
+        if (fullThumbContainer) {
+            const src = fullThumbContainer.getAttribute("src");
+            data.thumbs.full = src;
+        }
+        const videoThumbContainer = root?.querySelector("video");
+        if (videoThumbContainer) {
+            const src = videoThumbContainer.getAttribute("poster");
+            if (!data.thumbs.cover) data.thumbs.cover = src;
+            if (!data.thumbs.full) data.thumbs.full = src;
+        }
 
-    //// GET URLS
-    {
+        //// GET URLS
         if (!data.collectMore) {
             data.collectMore = [];
         }
@@ -143,29 +165,26 @@ async function crawlMovie(movieCode) {
             const hrefSets = Array.from(new Set(allHrefs));
             data.collectMore = hrefSets;
         }
-    }
 
-    //// GET EXTRAS
-    {
-        const dataNode = root.querySelector("div[class='movietable'] > div[class='row']");
-        const rawNames = extractRawNamesMovie(dataNode);
-        data = { ...data, ...rawNames };
+        //// GET FROM HREF
+        const hrefData = extractDataFromHref(dataNode);
+        data = { ...data, ...hrefData };
     }
 
     // console.log(data);
 
     // Download movie thumbs
     if (data.thumbs.cover) {
-        await downloadImageByUrl(data.thumbs.cover, MOVIE_THUMBS_FOLDER, movieCode + "-thumbs-cover.jpg");
+        await downloadImageByUrl(data.thumbs.cover, MOVIE_THUMBS_FOLDER, code + "-thumbs-cover.jpg");
     }
     if (data.thumbs.full) {
-        await downloadImageByUrl(data.thumbs.full, MOVIE_THUMBS_FOLDER, movieCode + "-thumbs-full.jpg");
+        await downloadImageByUrl(data.thumbs.full, MOVIE_THUMBS_FOLDER, code + "-thumbs-full.jpg");
     }
     for (const [idx, imageUrl] of Object.entries(data.images)) {
-        await downloadImageByUrl(imageUrl, MOVIE_THUMBS_FOLDER, movieCode + "-image-" + idx + ".jpg");
+        await downloadImageByUrl(imageUrl, MOVIE_THUMBS_FOLDER, code + "-image-" + idx + ".jpg");
     }
 
-    const fileJsonPath = path.join(CACHED_FOLDER, movieCode + ".json");
+    const fileJsonPath = path.join(CACHED_FOLDER, code + ".json");
     fs.writeFileSync(fileJsonPath, JSON.stringify(data));
     return data;
 }

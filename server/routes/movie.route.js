@@ -2,6 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const express = require('express');
 const router = express.Router();
+const crypto = require('crypto');
 
 const idolDbServices = require("../services/idol.service.database");
 const movieDbServices = require("../services/movie.service.database");
@@ -13,19 +14,36 @@ const { treatMovieCode } = require("../helpers");
 // SEARCH
 router.post('/search', async (req, res) => {
     try {
-        const { code, updateRecord } = req.body;
-        const curCode = treatMovieCode(code);
-        console.log("[MovieCode]", code);
+        const { code, url, updateRecord } = req.body;
+        if (!code && !url) {
+            throw new Error("Invalid inputs");
+        }
+
+        let curCode = "", curUrl = "";
+        if (code) {
+            curCode = treatMovieCode(code);
+            curUrl = "https://www.javdatabase.com/movies/" + code;
+        } else if (url) {
+            const regUrlCode = /https:\/\/www\.javdatabase\.com\/movies\/(?<code>.*[^\/])\/*/;
+            if (regUrlCode.test(url)) {
+                const matchGroups = url.match(regUrlCode);
+                curCode = matchGroups.groups.code;
+            } else {
+                curCode = crypto.createHash('md5').update(url).digest('hex');
+            }
+            curUrl = url;
+        }
+        console.log("🎞️  ", curCode);
+        console.log("\n");
 
         // 1. search in db
-        const moviesFound = await movieDbServices.searchMovieByCode(code);
+        const moviesFound = await movieDbServices.searchMovieByCode(curCode);
         // console.log('[moviesFound]', moviesFound);
         // 2. if has => return
         if (moviesFound.err) {
             throw new Error(err.message);
         }
         if (moviesFound.data.length > 0 && !updateRecord) {
-            // return movieFound.data;
             res.status(200).send(JSON.stringify(moviesFound.data));
             return;
         }
@@ -39,14 +57,14 @@ router.post('/search', async (req, res) => {
             const d = fs.readFileSync(cachedPath, "utf-8");
             movieData = JSON.parse(d);
         } else {
-            movieData = await movieCrawlingServices.crawlMovieByCode(curCode);
+            movieData = await movieCrawlingServices.crawlMovieService(curCode, curUrl);
         }
-        // console.log(idolData);
+        // console.log(movieData);
 
         // 4. treat data
         // 4.1 movie
         const movie = {
-            code: movieData.dvd_id,
+            code: curCode,
             title: movieData.title,
             studio: movieData.studio?.raw,
             release_date: movieData.release_date,
@@ -67,7 +85,7 @@ router.post('/search', async (req, res) => {
         }
 
         // 4.3 idol - movie (s)
-        const idolMovies = movieData.idols.map(idol => ({ movie_code: movieData.dvd_id.toLowerCase(), idol_name: idol.raw }));
+        const idolMovies = movieData.idols.map(idol => ({ movie_code: curCode.toLowerCase(), idol_name: idol.raw }));
 
         // 4.4 idol(s)
         const idols = movieData.idols.map(idol => ({
@@ -82,7 +100,7 @@ router.post('/search', async (req, res) => {
         console.log('[createIdolResult]', createIdolResult)
         // 5.2 save movie
         if (moviesFound.data.length > 0) {
-            const updateMovieResult = await movieDbServices.updateMovieByCode(code, movie);
+            const updateMovieResult = await movieDbServices.updateMovieByCode(curCode, movie);
             console.log('[updateMovieResult]', updateMovieResult)
         } else {
             const createMoviesResult = await movieDbServices.createMovies([movie]);
@@ -95,6 +113,7 @@ router.post('/search', async (req, res) => {
 
         res.status(200).send(JSON.stringify([movie]));
     } catch (error) {
+        console.log(error);
         res.status(500).send(error.message);
     }
 });

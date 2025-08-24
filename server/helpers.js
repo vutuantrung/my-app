@@ -122,7 +122,7 @@ function treatIdolName(name) {
 }
 
 function treatMovieCode(code) {
-    return code.toLowerCase();
+    return code.toLowerCase().trim();
 }
 
 function toMime(ext) {
@@ -154,7 +154,7 @@ function updateHTMLTemplate(idolData, moviesData) {
     const htmlTemplateString = fs.readFileSync("./assets/TEMPLATE_IDOL.html", "utf-8");
     const html = parse(htmlTemplateString);
 
-    const idolMetadata = JSON.parse(idolData.metadata)
+    const idolMetadata = JSON.parse(idolData.metadata);
 
     // avatar
     let imagePath = `./database/idol-avatars/${idolData.name}-avatar.jpg`;
@@ -175,7 +175,7 @@ function updateHTMLTemplate(idolData, moviesData) {
         biosElement.innerHTML += ele;
     }
 
-    const dateOfDebut = idolMetadata.debut;
+    const dateOfDebut = idolMetadata?.debut;
     if (dateOfDebut) {
         const ele = `<div class="bio-info"><span class="label">Date of debut</span><span class="value">${dateOfDebut}</span></div>`;
         biosElement.innerHTML += ele;
@@ -186,8 +186,7 @@ function updateHTMLTemplate(idolData, moviesData) {
         const ele = `<div class="bio-info"><span class="label">Movies count</span><span class="value">${moviesCount}</span></div>`;
         biosElement.innerHTML += ele;
     }
-
-    const measurements = idolData.measurements ? `${idolData.measurements}` + idolData.cup ? ` (${idolData.cup})` : "" : "";
+    const measurements = idolData.measurements ? `${idolData.measurements}` + (idolData.cup ? ` (${idolData.cup})` : "") : "";
     if (measurements) {
         const ele = `<div class="bio-info"><span class="label">Measurements</span><span class="value">${measurements}</span></div>`;
         biosElement.innerHTML += ele;
@@ -204,7 +203,7 @@ function updateHTMLTemplate(idolData, moviesData) {
     html.querySelector("img[class='nation-flag']").src = "https://www.countryflags.com/wp-content/uploads/japan-flag-png-large.png";
 
     // tags
-    const tags = idolMetadata.tags.split("|");
+    const tags = idolMetadata?.tags ? idolMetadata.tags.split("|") : [];
     const tagsElement = html.querySelector("div[class='tags']");
     for (const tag of tags) {
         if (tag.includes("age_group") || tag.includes("body_type")) {
@@ -244,7 +243,7 @@ function updateHTMLTemplate(idolData, moviesData) {
         html.querySelector("div[class='tags']").innerHTML += eleTemplate;
     }
 
-    const jjgirlData = idolMetadata.jjgirlData;
+    const jjgirlData = idolMetadata?.jjgirlData;
     if (jjgirlData) {
         const eleTemplate = `
             <span id="tag-note" class="tag tag-icon">
@@ -263,7 +262,7 @@ function updateHTMLTemplate(idolData, moviesData) {
             </a>
         </nav>`;
     html.querySelector("div[class='links-section']").innerHTML += javdatabaseLink;
-    if (idolMetadata.jjgirlData) {
+    if (jjgirlData) {
         const jjgirlsLink = `
             <nav class="links" aria-label="Links">
                 <a class="link" href="https://jjgirls.com/japanese/${idolData.name}/1/">
@@ -288,8 +287,8 @@ function updateHTMLTemplate(idolData, moviesData) {
             html.querySelector("div[class='gallery']").innerHTML += imgHtmlString;
             movieDisplayCount++;
         }
-    } else if (idolMetadata.jjgirlData) {
-        const imgUrls = generateRandomUrls(idolMetadata.jjgirlData)
+    } else if (jjgirlData) {
+        const imgUrls = generateRandomUrls(jjgirlData)
         for (const imgUrl of imgUrls) {
             const imgHtmlString = `<img class="movie-thumbs" src="${imgUrl}" />`
             html.querySelector("div[class='gallery']").innerHTML += imgHtmlString;
@@ -335,5 +334,6 @@ module.exports = {
     generateRandomNumber,
     updateHTMLTemplate,
     render404Page,
+    shuffleArray,
     generateHashedFromString
 }

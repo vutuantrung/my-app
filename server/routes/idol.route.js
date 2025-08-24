@@ -7,7 +7,7 @@ const idolDbServices = require("../services/idol.service.database");
 const movieDbServices = require("../services/movie.service.database");
 const idolMovieDbServices = require("../services/idolMovie.services.database");
 const idolCrawlingServices = require("../services/idol.service.crawl");
-const { treatIdolName, toMime, updateHTMLTemplate, render404Page } = require("../helpers");
+const { treatIdolName, toMime, updateHTMLTemplate, render404Page, shuffleArray } = require("../helpers");
 const { getJJGirlsImageIndex } = require("../features/jjgirls/jjgirls.utils");
 
 // CREATE
@@ -40,8 +40,10 @@ router.post('/search', async (req, res) => {
     try {
         const { name, updateRecord, displayType } = req.body;
         const curName = treatIdolName(name);
-        console.log("👩", curName);
-        console.log("\n")
+        console.log("👩  ", curName);
+        console.log("\n");
+
+        // Todo: check the inversed name
 
         // 1. search in db
         const idolsFound = await idolDbServices.searchIdolsByName(curName);
@@ -51,9 +53,18 @@ router.post('/search', async (req, res) => {
         if (idolsFound.err) {
             throw new Error(err.message);
         }
+        // console.log('[idolsFound]', idolsFound);
         if (idolsFound.data.length > 0 && !updateRecord) {
-            // Todo: search movies thumbs (8 movies)
-            res.status(200).send(JSON.stringify(idolsFound.data));
+            const searchMoviesReq = await idolMovieDbServices.searchMovieByIdolName(curName);
+            const moviesCode = searchMoviesReq.map(e => e.movie_code);
+            const shuffledMoviesCode = shuffleArray(moviesCode).slice(0, 8).filter(Boolean);
+            const moviesDataReq = await movieDbServices.searchMoviesByCodes(shuffledMoviesCode);
+            // console.log(moviesDataReq);
+            let resultSendback = displayType === "json"
+                ? JSON.stringify(idolsFound.data[0])
+                : updateHTMLTemplate(idolsFound.data[0], moviesDataReq.data);
+
+            res.status(200).send(resultSendback);
             return;
         }
         // 3. crawl from internet
@@ -134,13 +145,18 @@ router.post('/search', async (req, res) => {
 
         // 5.2 save movie(s)
         if (movies.length === 0) console.log('No movies to save.');
-        const createMoviesResult = await movieDbServices.createMovies(movies);
-        console.log('[createMoviesResult]', createMoviesResult);
+        else {
+            const createMoviesResult = await movieDbServices.createMovies(movies);
+            console.log('[createMoviesResult]', createMoviesResult);
+        }
 
         // 5.3 save idol - movie (s)
+        // console.log('[idol]', idol);
         if (idolMovies.length === 0) console.log('No idol movies to save.');
-        const createIdolMovies = await idolMovieDbServices.createIdolMovies(idolMovies);
-        console.log('[createIdolMovies]', createIdolMovies);
+        else {
+            const createIdolMovies = await idolMovieDbServices.createIdolMovies(idolMovies);
+            console.log('[createIdolMovies]', createIdolMovies);
+        }
 
         let resultSendback = displayType === "json"
             ? JSON.stringify(idol)
@@ -159,14 +175,7 @@ router.post('/setIdolAvatar', async (req, res) => {
 })
 
 router.post('/test', async (req, res) => {
-    const imagePath = "./test/testReturn.html";
-    const abs = path.resolve(imagePath);
-    const htmlString = fs.readFileSync(imagePath, "utf-8");
-    const b64 = fs.readFileSync("./database/idol-avatars/ren-gojo-avatar.jpg", "base64");
-    const mime = toMime(path.extname(abs));
-    const dataUri = `data:${mime};base64,${b64}`;
-    const result = htmlString.replace("#SCR_B64#", dataUri)
-    res.send(result);
+    res.send("wanna test something ?");
 })
 
 module.exports = router;

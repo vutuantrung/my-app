@@ -4,6 +4,50 @@ const { createPropertiesCREATEColumns, createPropertiesValues, createRecordArray
 
 const columns = ["code", "title", "studio", "release_date", "runtime", "note", "favorite", "my_favorite", "thumbs_short", "thumbs", "images", "created_time", "updated_time", "metadata"];
 
+function dbAll(db, sql, params = []) {
+    return new Promise((resolve, reject) => {
+        db.all(sql, params, (err, rows) => (err ? reject(err) : resolve(rows)));
+    });
+}
+
+async function searchMoviesByCodes(codesInput) {
+    // Normalize to an ordered, de-duplicated array of codes
+    const codes = (Array.isArray(codesInput) ? codesInput : String(codesInput || "").split(","))
+        .map(s => String(s).trim())
+        .filter(Boolean);
+
+    if (codes.length === 0) return { data: [], notFound: [] };
+
+    const seen = new Set();
+    const uniqueCodes = codes.filter(c => (seen.has(c) ? false : (seen.add(c), true)));
+
+    // Chunk to respect SQLite's usual 999 bind-parameter limit
+    const PARAM_LIMIT = 999;
+    const chunks = [];
+    for (let i = 0; i < uniqueCodes.length; i += PARAM_LIMIT) {
+        chunks.push(uniqueCodes.slice(i, i + PARAM_LIMIT));
+    }
+
+    try {
+        const rows = [];
+        for (const chunk of chunks) {
+            const placeholders = chunk.map(() => "?").join(",");
+            const sql = `SELECT * FROM movie WHERE code IN (${placeholders})`;
+            rows.push(...await dbAll(db, sql, chunk));
+        }
+
+        // Map by code for O(1) reconstruction in input order
+        const byCode = new Map(rows.map(r => [r.code, r]));
+        const data = codes.map(c => byCode.get(c)).filter(Boolean);
+        const notFound = uniqueCodes.filter(c => !byCode.has(c));
+
+        return { data, notFound };
+    } catch (err) {
+        console.error("[searchMoviesByCodes] Search failed:", err.message);
+        return { data: [], notFound: [], err: err.message };
+    }
+}
+
 // GET all or search by codes (comma-separated)
 async function searchMovieByCode(code) {
     if (!code) {
@@ -135,6 +179,7 @@ async function deleteMovieById(id) {
 
 module.exports = {
     searchMovieByCode,
+    searchMoviesByCodes,
     createMovies,
     updateMovieByCode,
     deleteMovieById,

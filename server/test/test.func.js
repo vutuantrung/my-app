@@ -128,53 +128,145 @@ async function execute() {
 // }
 const crypto = require('crypto');
 const { parse } = require('node-html-parser');
+const { extractDataFromHref, extractText } = require("../features/webCrawler/webCrawler.utils.js");
 function check() {
+    let data = {};
     const htmlContentString = fs.readFileSync("./test/test.html", "utf-8");
     const root = parse(htmlContentString);
 
-    let listNode = root?.querySelector("#primary > .row");
-    const isEndListReached = listNode.innerText.trim().includes("No uncensored movies for this idol.");
-    if (isEndListReached) {
-        console.log("reach end");
-        return;
+    // const dataNode = root.querySelector("div[class='movietable'] > div[class='row']");
+    const dataNode = root.querySelector("#main > .entry-content");
+    const allTexts = extractText(dataNode);
+    const treatedAttr = [];
+    for (let i = 0; i < allTexts.length; i++) {
+        if (allTexts[i].includes("[*]")) {
+            let newAttr = allTexts[i];
+            for (let j = i + 1; j < allTexts.length; j++) {
+                if (allTexts[j].includes("[*]") || allTexts[j] === "View All Favorites" || j === allTexts.length - 1) {
+                    if (newAttr[newAttr.length - 1] === ",") {
+                        newAttr = newAttr.slice(0, -1);
+                    }
+                    treatedAttr.push(newAttr);
+                    break;
+                }
+                newAttr += allTexts[j] + ",";
+            }
+        }
     }
 
-    const newMovies = [];
-    const cardNodes = listNode.querySelectorAll(".card");
-    for (const cardNode of cardNodes) {
-        const title = cardNode.querySelector("p[class='display-6 pcard']").innerText.trim().replaceAll("\r\n", "").replace(/ +/g, " ");
-        // console.log(JSON.stringify(cardNode.querySelector("p[class='display-6 pcard']").innerText));
-        // console.log('[code]', code)
-        const movieLink = cardNode.querySelector("p[class='display-6 pcard'] > a[class='cut-text']").getAttribute("href")
-        // console.log('[movieLink]', movieLink)
-        const thumbsNode = cardNode.querySelector("div[class='movie-cover-thumb'] > a > img");
-        // console.log('[thumbsSrc]', thumbsNode.getAttribute('src').replace("/thumb/", "/full/").replace("ps.webp", "pl.webp"))
-        const releasedDateNode = cardNode.querySelector("div[class='mt-auto']").innerText.trim().replaceAll("\t", "").replaceAll("\n", "").replace(/ +/g, " ");
-
-        console.log('\n');
-        console.log(title);
-        console.log(movieLink);
-        // console.log(thumbsNode.getAttribute('src'));
-        // console.log(releasedDateNode);
-
-        const hashed = crypto.createHash('md5').update(movieLink).digest('hex');
-        const data = {
-            code: crypto.createHash('md5').update(movieLink).digest('hex'),
-            movieLink: movieLink,
-            thumbsShort: thumbsNode.getAttribute('src'),
-            thumbs: "",
-            desc: "",
-            releaseDate: releasedDateNode,
-            title: title,
-            genres: null,
-            studio: null,
-            trailer: null,
-            runtime: null,
-            favorite: null,
-            actress: null,
-            note: null,
-            thumbs: null
-        };
-        console.log(data.code === hashed);
+    for (let i = 0; i < treatedAttr.length; i++) {
+        if (treatedAttr[i].includes("[*]Title:")) {
+            treatedAttr[i] = treatedAttr[i].replaceAll("Title,", "").replaceAll("\r", "").replaceAll("\n", "").replace(/\s\s+/g, ' ').trim();
+        }
+        if (treatedAttr[i].includes("[*]Favorite:")) {
+            treatedAttr[i] = treatedAttr[i].replace("Favorite,", "").replaceAll("\r", "").replaceAll("\n", "").replace(/\s\s+/g, ' ').trim();
+        }
+        if (treatedAttr[i].includes("[*]Idol(s)/Actress(es)")) {
+            treatedAttr[i] = "[*]Actress(es):" + treatedAttr[i].split(":")[1];
+        }
+        // // treatedAttr[i] = treatedAttr[i].replace("[*]", "")
+        const [a, v] = treatedAttr[i].replace("[*]", "").split(":");
+        data[a.replace(" ", "_").toLowerCase()] = v;
     }
+
+    // delete
+    delete data['genre(s)'];
+    delete data['actress(es)'];
+
+    // 2. Rating data
+    const ratingNode = root?.querySelector("div[class='post-ratings']");
+    if (ratingNode) {
+        const allTexts = extractText(ratingNode);
+        const noRatingText = allTexts[0].replaceAll("\r", "").replaceAll("\n", "").replace(/\s\s+/g, ' ').trim();
+        // console.log('[allTexts]', noRatingText)
+        const note = noRatingText === "(No Ratings Yet)"
+            ? noRatingText
+            : allTexts.join(" ").replace(")", "").split("average:")[1].replace(" out of ", "/").trim();
+        treatedAttr.push("Note: " + note);
+        data.note = note;
+    }
+
+    // 3. Movie images
+    if (!data.images) data.images = [];
+    const imageNodes = root?.querySelector("div[id='lightboxModal']").parentNode.querySelector("div[class='container']")?.firstElementChild.children;
+    if (Array.isArray(imageNodes)) {
+        for (const iNode of imageNodes) {
+            const imgHref = iNode.firstElementChild.getAttribute("data-image-href");
+            data.images.push(imgHref);
+        }
+    }
+
+    // 4. Movie thumbs
+    if (!data.thumbs) {
+        data.thumbs = { cover: "", full: "" };
+    }
+    const coverThumbContainer = root?.querySelector("div[id='thumbnailContainer'] > a > img");
+    if (coverThumbContainer) {
+        const src = coverThumbContainer.getAttribute("src");
+        data.thumbs.cover = src;
+    }
+    const fullThumbContainer = root?.querySelector("div[id='poster-container'] > a > img");
+    if (fullThumbContainer) {
+        const src = fullThumbContainer.getAttribute("src");
+        data.thumbs.full = src;
+    }
+    const videoThumbContainer = root?.querySelector("video");
+    if (videoThumbContainer) {
+        const src = videoThumbContainer.getAttribute("poster");
+        if (!data.thumbs.cover) data.thumbs.cover = src;
+        if (!data.thumbs.full) data.thumbs.full = src;
+    }
+
+    //// GET URLS
+    {
+        if (!data.collectMore) {
+            data.collectMore = [];
+        }
+        const allURLElements = root.querySelectorAll("a");
+        const allHrefs = allURLElements?.map(e => e.getAttribute("href"))?.filter(url => {
+            if (url === "https://www.javdatabase.com/idols/") return false;
+            if (!url.startsWith("https://www.javdatabase.com/idols/")) return false;
+            const regCurrentIdol = /https:\/\/www\.javdatabase\.com\/idols\/.*\/\?ipage=[0-9]*/g;
+            if (regCurrentIdol.test(url)) return false;
+            const regComment = /https:\/\/www\.javdatabase\.com\/idols\/.*\/#comment-[0-9]*/g;
+            if (regComment.test(url)) return false;
+
+            return true;
+        });
+
+        if (Array.isArray(allHrefs)) {
+            const hrefSets = Array.from(new Set(allHrefs));
+            data.collectMore = hrefSets;
+        }
+    }
+
+    //// GET FROM HREF
+    const hrefData = extractDataFromHref(dataNode);
+    // console.log('[movieData]', hrefData);
+
+    data = { ...data, ...hrefData };
+    console.log('[data]', data);
+
 }
+
+const path = require('path');
+
+function saveBase64VideoAsMp4(base64Data, outputFilePath) {
+    // Remove the data URI prefix if present
+    const base64String = base64Data.replace(/^data:video\/mp4;base64,/, '');
+
+    // Decode Base64 to buffer
+    const videoBuffer = Buffer.from(base64String, 'base64');
+
+    // Ensure the directory exists
+    fs.mkdirSync(path.dirname(outputFilePath), { recursive: true });
+
+    // Write buffer to file
+    fs.writeFileSync(outputFilePath, videoBuffer);
+
+    console.log(`Video saved successfully at: ${outputFilePath}`);
+}
+
+// Example usage:
+const base64Video = fs.readFileSync('test/video_base64.txt', 'utf8'); // file containing base64 string
+saveBase64VideoAsMp4(base64Video, './video_converted.mp4');

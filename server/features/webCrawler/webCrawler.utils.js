@@ -7,9 +7,15 @@ function extractText(node, texts = []) {
     if (node.nodeType === 3) { // TEXT_NODE
         const trimmed = node.rawText.trim();
         if (trimmed) {
+            // console.log('[trimmed]', trimmed);
             if (node.parentNode?.rawTagName && node.parentNode.rawTagName.toLowerCase() === "b") {
+                // console.log("[*]", trimmed);
                 texts.push("[*]" + trimmed);
-            } else if (!trimmed.startsWith("Movies Link #") && !trimmed.startsWith("Chat Link #")) {
+            }
+            else if (trimmed.toLowerCase() === "favorite") {
+                texts.push("[*]" + trimmed + ":");
+            }
+            else if (!trimmed.startsWith("Movies Link #") && !trimmed.startsWith("Chat Link #")) {
                 texts.push(trimmed);
             }
         }
@@ -19,15 +25,28 @@ function extractText(node, texts = []) {
             extractText(child, texts);
         }
     }
-    return texts;
+
+    return Array.from(new Set(texts));
 }
 
-function extractRawNamesMovie(node) {
+function extractDataFromHref(node) {
     const data = {};
     const allURLElements = node.querySelectorAll("a");
     const genres = [], idols = [];
-    for (const aElement of allURLElements) {
+    // remove duplicate html elements
+    const allHrefUrlsSet = [];
+    const allHrefElementsSet = [];
+    for (const ele of allURLElements) {
+        const eHref = ele.getAttribute("href");
+        if (!allHrefUrlsSet.includes(eHref)) {
+            allHrefUrlsSet.push(eHref);
+            allHrefElementsSet.push(ele);
+        }
+    }
+    // const allHrefUrlsSet = Array.from(new Set([...allURLElements]));
+    for (const aElement of allHrefElementsSet) {
         const href = aElement.getAttribute("href");
+        // console.log(`|${href}|`);
         if (!href) continue;
 
         const name = aElement.innerText.replaceAll("\r", "").replaceAll("\n", "").replace(/\s\s+/g, ' ');
@@ -94,7 +113,7 @@ function parseUsingOtherPackage(htmlString, className) {
     const dom = parseDocument(htmlString);
 
     fs.writeFileSync("./test2.html", htmlString);
-    console.log(htmlString)
+    // console.log(htmlString)
 
     // Find all elements with class "row"
     const rows = DomUtils.findAll(
@@ -104,14 +123,14 @@ function parseUsingOtherPackage(htmlString, className) {
             elem.attribs.class.split(' ').includes(className),
         dom.children
     );
-    console.log(rows);
+    // console.log(rows);
 
     let ele = null;
     if (rows.length > 0) {
-        console.log(DomUtils.getText(rows[0]));
+        // console.log(DomUtils.getText(rows[0]));
         ele = parse(DomUtils.getText(rows[0]));
     }
     return ele;
 }
 
-module.exports = { extractText, extractRawNamesMovie, extractRawNamesIdol, parseUsingOtherPackage }
+module.exports = { extractText, extractDataFromHref, extractRawNamesIdol, parseUsingOtherPackage }

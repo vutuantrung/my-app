@@ -309,7 +309,6 @@ async function crawlIdol(name) {
         }
         data.movies = [...data.movies, ...newMovies];
         pageCount++;
-
     }
 
     if (Array.isArray(data.collectMore)) {

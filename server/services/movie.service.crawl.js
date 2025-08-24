@@ -1,9 +1,15 @@
 const { crawlMovie } = require("../features/webCrawler/collectMovieData");
 
-async function crawlMovieByCode(code) {
+async function crawlMovieService(code, url) {
     // crawlpage: www.javdatabase.com
-    const crawledData = await crawlMovie(code);
-    return crawledData
+    const crawledData = await crawlMovie({ code, url });
+    return crawledData;
 }
 
-module.exports = { crawlMovieByCode };
+// async function crawlMovieByUrl(url) {
+//     // crawlpage: www.javdatabase.com
+//     const crawledData = await crawlMovie({ movieUrl: url });
+//     return crawledData;
+// }
+
+module.exports = { crawlMovieService };
