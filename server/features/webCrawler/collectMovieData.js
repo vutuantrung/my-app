@@ -38,7 +38,12 @@ async function crawlMovie(movieInfo) {
         await axios.get(url, {
             "headers": {
                 "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-                "Referrer-Policy": "strict-origin-when-cross-origin"
+                "Referrer-Policy": "strict-origin-when-cross-origin",
+                "sec-ch-ua": "\"Not;A=Brand\";v=\"99\", \"Google Chrome\";v=\"139\", \"Chromium\";v=\"139\"",
+                "sec-ch-ua-mobile": "?0",
+                "sec-ch-ua-platform": "\"Windows\"",
+                "upgrade-insecure-requests": "1",
+                "Referer": "https://www.javdatabase.com/"
             }
         })
             .then(response => {

@@ -6,6 +6,7 @@ const {
     CACHED_FOLDER,
     SERVER_FOLDER_PATH
 } = require('./constants.js');
+const { runProfileConnecting } = require('./features/webCrawler/captureWorker.js');
 
 if (!fs.existsSync(SERVER_FOLDER_PATH)) {
     console.log(`External DB path does not exist: ${SERVER_FOLDER_PATH}, please create theses folders:
@@ -20,8 +21,6 @@ const cors = require('cors');
 const app = express();
 const PORT = 3001;
 
-// const puppeteer = require('puppeteer');
-
 app.use(cors());
 app.use(express.json());
 
@@ -33,13 +32,45 @@ const idolProfileRoutes = require('./routes/idol.route.js');
 app.use('/api/idol', idolProfileRoutes);
 const movieRoutes = require('./routes/movie.route.js');
 
+
 app.use('/api/movie', movieRoutes);
 
-app.post('/test', (req, res) => {
-    console.log("in test.....");
-    res.status(200).send(JSON.stringify({ data: "qwe" }))
-})
+// app.post('/test', (req, res) => {
+//     console.log("in test.....");
+//     res.status(200).send(JSON.stringify({ data: "qwe" }))
+// })
 
 app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
+});
+
+// runProfileConnecting();
+
+// Graceful shutdown: Ctrl+C or SIGTERM
+const GRACE_MS = 5000;
+
+const shutdown = (signal) => {
+    console.log(`\n${signal} received. Closing HTTP server...`);
+    // Stop accepting new connections
+    app.close((err) => {
+        if (err) console.error("app.close error:", err);
+        process.exit(0);
+    });
+
+    // Give in-flight requests some time, then nuke leftovers
+    setTimeout(() => {
+        for (const s of sockets) {
+            try { s.destroy(); } catch { }
+        }
+    }, GRACE_MS).unref();
+};
+
+process.on("SIGINT", () => shutdown("SIGINT"));   // Ctrl+C
+process.on("SIGTERM", () => shutdown("SIGTERM"));  // e.g. from a process manager
+
+// Optional: play nice with nodemon restarts
+process.once("SIGUSR2", () => {
+    shutdown("SIGUSR2");
+    // Nodemon expects us to re-emit after cleanup:
+    setTimeout(() => process.kill(process.pid, "SIGUSR2"), 100);
 });

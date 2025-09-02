@@ -1,0 +1,1 @@
+"C:\Program Files\Google\Chrome\Application\chrome.exe" --remote-debugging-port=9221 --window-size=400,800 --user-data-dir="C:\Users\trung\AppData\Local\Google\Chrome\User Data\Profile 1" "https://www.google.com/"

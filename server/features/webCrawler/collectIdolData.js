@@ -10,6 +10,7 @@ const { default: axios } = require('axios');
 const { CACHED_FOLDER, IDOL_AVATAR_FOLDER } = require('../../constants');
 const { parseDocument } = require('htmlparser2');
 const { selectOne, selectAll } = require('css-select');
+const { redirectPageUrl } = require('./captureWorker');
 const render = require("dom-serializer").default;
 
 // Page: javdatabase
@@ -33,6 +34,7 @@ async function crawlIdol(name) {
             htmlContentRoot = fs.readFileSync(htmlFilePath, "utf-8");
         } else {
             console.log("🔥 Gonna crawl from url:", url);
+            // fetch request
             try {
                 const res = await axios.get(url, {
                     "headers": {
@@ -52,6 +54,13 @@ async function crawlIdol(name) {
                     return null;
                 }
             }
+
+            // const redirectSuccess = await redirectPageUrl("profile1", url, htmlFilePath);
+            // if (!redirectSuccess) {
+            //     console.log("nope");
+            //     return null;
+            // }
+            // htmlContentRoot = fs.readFileSync(htmlFilePath, "utf-8");
         }
         // Get the root
         const root = parse(htmlContentRoot);
@@ -247,18 +256,30 @@ async function crawlIdol(name) {
         } else {
             console.log("🔥 Gonna crawl from url:", url);
             try {
-                const res = await axios.get(url, {
-                    "headers": {
-                        "Referrer-Policy": "strict-origin-when-cross-origin"
-                    }
-                });
+                // const res = await axios.get(url, {
+                //     "headers": {
+                //         "sec-ch-ua": "\"Not;A=Brand\";v=\"99\", \"Google Chrome\";v=\"139\", \"Chromium\";v=\"139\"",
+                //         "sec-ch-ua-mobile": "?0",
+                //         "sec-ch-ua-platform": "\"Windows\"",
+                //         "upgrade-insecure-requests": "1",
+                //         "Referer": "https://www.javdatabase.com/"
+                //     }
+                // });
 
-                if (res.status !== 200) {
-                    throw new Error(`Failed to fetch data for model ${name}. Status: ${response.status}`);
+                // if (res.status !== 200) {
+                //     throw new Error(`Failed to fetch data for model ${name}. Status: ${response.status}`);
+                // }
+
+                // htmlContentRoot = res.data;
+                // fs.writeFileSync(htmlFilePath, htmlContentRoot);
+
+                const redirectSuccess = await redirectPageUrl("profile1", url, htmlFilePath);
+                if (!redirectSuccess) {
+                    console.log("nope");
+                    return null;
                 }
-
-                htmlContentRoot = res.data;
-                fs.writeFileSync(htmlFilePath, htmlContentRoot);
+                console.log("ok hehree");
+                htmlContentRoot = fs.readFileSync(htmlFilePath, "utf-8");
             } catch (error) {
                 console.error(error.message);
                 break;
