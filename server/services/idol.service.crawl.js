@@ -1,4 +1,3 @@
-
 const { IDOL_AVATAR_FOLDER } = require("../constants");
 const { crawlIdol } = require("../features/webCrawler/collectIdolData");
 const { downloadImageByUrl } = require("../helpers");

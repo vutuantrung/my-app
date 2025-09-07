@@ -10,11 +10,287 @@ const { default: axios } = require('axios');
 const { CACHED_FOLDER, IDOL_AVATAR_FOLDER } = require('../../constants');
 const { parseDocument } = require('htmlparser2');
 const { selectOne, selectAll } = require('css-select');
-const { redirectPageUrl } = require('./captureWorker');
+const ProxyRotator = require('../../services/proxy.service');
+// const { redirectPageUrl } = require('./captureWorker');
 const render = require("dom-serializer").default;
+
+const REDOWNLOAD = false;
 
 // Page: javdatabase
 async function crawlIdol(name) {
+    const RETRY_TIMES = 3;
+    let data = {},
+        htmlContentRoot = null,
+        personalDataCollected = false;
+
+    // const exist = fs.existsSync(cachedPath);
+    // const filePath = `../cached/${name}.html`;
+
+    const proxyService = new ProxyRotator("random");
+
+    const treatedAttr = [];
+    await sleep(1000);
+    // Get from the second page
+    const htmlFilePath = path.join(CACHED_FOLDER, name.toLowerCase() + ".html");
+    const url = `https://www.javdatabase.com/idols/${name}`;
+    if (!REDOWNLOAD && fs.existsSync(htmlFilePath)) {
+        console.log("✔️ File already exists:", htmlFilePath);
+        htmlContentRoot = fs.readFileSync(htmlFilePath, "utf-8");
+    } else {
+        console.log("🔥 Gonna crawl from url:", url);
+        // fetch request
+        for (let i = 0; i < RETRY_TIMES; i++) {
+            try {
+                if (i > 0) console.log("Retry", i + 1, "time(s).");
+                const client = proxyService.axiosForNextProxy();
+                const res = await client.get(url);
+                console.log("Proxy used:", client._proxy.url, url);
+
+                if (res.status !== 200) {
+                    throw new Error(`Failed to fetch data for model ${name}. Status: ${response.status}`);
+                }
+
+                htmlContentRoot = res.data;
+                fs.writeFileSync(htmlFilePath, htmlContentRoot);
+                break;
+            } catch (error) {
+                console.error(error.message);
+                if (error.status === 404) {
+                    return null;
+                }
+            }
+        }
+    }
+    // Get the root
+    const root = parse(htmlContentRoot);
+    if (!root) console.log("root is null");
+    if (!data.movies) data.movies = [];
+    if (!data.tags) data.tags = []
+
+    //// COLLECT PROFILE
+    if (!personalDataCollected) {
+        // 1. Personal avatar
+        data.avatar = "default";
+        const avatarImgSrc = root?.querySelector("div[class*='idol-portrait'] img");
+        if (avatarImgSrc) {
+            data.avatar = avatarImgSrc.getAttribute("src");
+        }
+
+        // 2. Personal data
+        const modelInfoNode = root?.querySelector("h1[class='idol-name']")?.parentNode;
+        if (modelInfoNode) {
+            const newHtmlContent = modelInfoNode.innerHTML.replaceAll("\t-", "").replaceAll("\t", "")
+            const allTexts = extractText(parse(newHtmlContent));
+
+            treatedAttr.push(allTexts[0]);
+            for (let i = 1; i < allTexts.length; i++) {
+                if (!allTexts[i].includes("[*]")) continue;
+
+                let newAttr = allTexts[i];
+                for (let j = i + 1; j < allTexts.length; j++) {
+                    if (allTexts[j].includes("[*]") || allTexts[j] === "Suggest Tags" || j === allTexts.length - 1) {
+                        treatedAttr.push(newAttr);
+                        break;
+                    }
+                    newAttr += allTexts[j];
+                }
+            }
+
+            for (let i = 0; i < treatedAttr.length; i++) {
+                if (i === 0) {
+                    treatedAttr[i] = "Name:" + treatedAttr[i].replace("- JAV Profile", "").trim();
+                }
+                if (treatedAttr[i].includes("[*]Tags:")) {
+                    treatedAttr[i] = treatedAttr[i].replaceAll("-", ",").trim();
+                }
+                if (treatedAttr[i].includes("[*]JP:")) {
+                    treatedAttr[i] = treatedAttr[i].replaceAll("-", "").trim();
+                }
+                const [a, v] = treatedAttr[i].replace("[*]", "").split(":");
+                data[a.replace(" ", "_").toLowerCase()] = v;
+            }
+        }
+
+        // 3. Rating data
+        const ratingNode = root?.querySelector("div[class='post-ratings']");
+        if (ratingNode) {
+            const allTexts = extractText(ratingNode);
+            // console.log(allTexts)
+            const note = allTexts[0] === "(No Ratings Yet)"
+                ? "(No Ratings Yet)"
+                : allTexts.join(" ").replace(")", "").split("average:")[1].replace(" out of ", "/").trim();
+            treatedAttr.push("Note: " + note);
+            data.note = note;
+        }
+
+        // 4. Favorite count
+        const favoriteCountNode = root?.querySelector("span[class='simplefavorite-button-count']");
+        if (favoriteCountNode) {
+            const allTexts = extractText(favoriteCountNode);
+            treatedAttr.push("Favorite: " + allTexts[0]);
+            data.favorite = allTexts[0]
+        }
+
+        // 5. Movies count
+        const biographyNode = root?.querySelector("div[id='biography']");
+        if (biographyNode) {
+            const allTexts = extractText(biographyNode);
+            const fullText = allTexts.map(e => e.trim().replaceAll("\r", "").replaceAll("\t", "").replaceAll("\n", "")).join(" ");
+            const bioData = fullText.split(".").map(e => e.trim()).filter(e => e)
+            const reg = /(.*) has starred in ([0-9]*) movies/;
+            const test = bioData[bioData.length - 1].match(reg);
+            treatedAttr.push("Movies count: " + test[2]);
+            data.movies_count = test[2]
+        }
+
+        // 6. Tags
+        const tagsContainerElement = root?.querySelector("h1[class='idol-name']")?.parentNode;
+        if (tagsContainerElement) {
+            const rawNameTags = extractRawNamesIdol(tagsContainerElement);
+            data.tags = rawNameTags;
+        }
+
+        personalDataCollected = true;
+    }
+
+    //// COLLECT MOVIES
+    const apiNameQuery = [name.toLowerCase(), name.toLowerCase() + "-1"];
+    for (const queryName of apiNameQuery) {
+        let pageCount = 0, jsonDataString = null, jsonData = null, fileExisted = false;
+        while (true) {
+            try {
+                const jsonFilePath = path.join(CACHED_FOLDER, queryName + "_movie_" + pageCount + ".json");
+                const url = `https://javher.com/api/casts/${queryName}?page=${pageCount}&mode=all`;
+                fileExisted = fs.existsSync(jsonFilePath);
+                if (fileExisted) {
+                    console.log("✔️ File already exists:", jsonFilePath);
+                    jsonDataString = fs.readFileSync(jsonFilePath, "utf-8");
+                    jsonData = JSON.parse(jsonDataString);
+                } else {
+                    for (let i = 0; i < RETRY_TIMES; i++) {
+                        try {
+                            if (i > 0) console.log("Retry", i + 1, "time(s).");
+                            const client = proxyService.axiosForNextProxy({
+                                headers: {
+                                    'Accept': 'application/json',
+                                    'Authorization': 'HAHA_ADAM_HAVE_TO_RESORT_TO_THIS#@!@#',
+                                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36',
+                                    'Cookie': 'user-country=USN'
+                                }
+                            });
+
+                            const res = await client.get(url); console.log("Proxy used:", client._proxy.url, url);
+                            if (res.status !== 200) {
+                                throw new Error(`Failed to fetch data for model ${queryName}. Status: ${response.status}`);
+                            }
+                            jsonData = res.data;
+                            fs.writeFileSync(jsonFilePath, JSON.stringify(jsonData));
+                            break;
+                        } catch (error) {
+                            console.log(error.message);
+                        }
+                    }
+                }
+
+                if (!jsonData) {
+                    console.log("Fetch failed after retry", RETRY_TIMES, "times");
+                    break;
+                }
+
+                const { success: fetchedSuccess, videos: fetchedVideos, count: moviesCount } = jsonData;
+                // console.log('[jsonData]', jsonData);
+
+                if (!fetchedSuccess) {
+                    console.log("Fetch failed:", jsonData);
+                    break;
+                }
+
+                if (Array.isArray(fetchedVideos) && fetchedVideos.length === 0) {
+                    console.log("Videos final page reached! Number of videos:", jsonData.count);
+                    break;
+                }
+
+                data.movies_count += parseInt(moviesCount);
+
+                const videos = fetchedVideos.map(m => {
+                    const releaseDate2 = new Date(m.releaseDate);
+                    const movieLink = `https://javher.com/api/video/watch-${m.contentId}-${releaseDate2.getTime()}`
+                    return {
+                        code: m.dvdId.toLowerCase(),
+                        movieLink: movieLink,
+                        thumbsShort: m.image.replace("pl.", "ps."),
+                        thumbs: m.image,
+                        desc: "",
+                        releaseDate: m.releaseDate.split("T")[0],
+                        title: m.title,
+                        genres: null,
+                        studio: null,
+                        trailer: null,
+                        runtime: m.duration + " min",
+                        favorite: null,
+                        actress: null,
+                        note: null,
+                        metadata: {
+                            content_id: m.contentId.toLowerCase(),
+                            jpTitle: m.jpTitle,
+                            zhTitle: m.zhTitle
+                        }
+                    }
+                });
+                data.movies.push(...videos);
+
+            } catch (error) {
+                console.error(error.message);
+            } finally {
+                pageCount++;
+                if (!fileExisted) {
+                    await sleep(2000);// Prevent rushing request call
+                }
+            }
+        }
+    }
+
+    // console.log(data);
+    const saveDataCollected = true;
+    if (saveDataCollected) {
+        fs.writeFile("test/collectIdolTest.json", JSON.stringify(data), (err => {
+            if (err) console.log(err.message);
+            else console.log("collectIdolTest saved successfully!");
+        }));
+    } else {
+        fs.writeFile("test/collectIdolTest.json", "", (err => {
+            if (err) console.log(err.message);
+            else console.log("erased collectIdolTest data successfully!");
+        }));
+    }
+
+    // download idol avatar
+    const client = proxyService.axiosForNextProxy({
+        responseType: "stream",
+        timeout: 10000,
+        headers: {
+            'Accept': 'application/json',
+            'Authorization': 'HAHA_ADAM_HAVE_TO_RESORT_TO_THIS#@!@#',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36',
+            'Cookie': 'user-country=USN'
+        }
+    });
+    await downloadImageByUrl(data.avatar, IDOL_AVATAR_FOLDER, name + "-avatar.jpg", client);
+
+    const fileJsonPath = path.join(CACHED_FOLDER, name + ".json");
+    fs.writeFileSync(fileJsonPath, JSON.stringify(data));
+
+    console.log(`✅ Page crawled succcessfully!`);
+
+    return data;
+}
+
+module.exports = { crawlIdol }
+
+// crawlIdol("saika-kawakita-1");
+
+
+async function crawlIdol_DEPRECATED(name) {
     let data = {},
         htmlContentRoot = null,
         pageCount = 1,
@@ -137,19 +413,20 @@ async function crawlIdol(name) {
                 data.favorite = allTexts[0]
             }
 
-            // 5. Movies count
-            const biographyNode = root?.querySelector("div[id='biography']");
-            if (biographyNode) {
-                const allTexts = extractText(biographyNode);
-                const fullText = allTexts.map(e => e.trim().replaceAll("\r", "").replaceAll("\t", "").replaceAll("\n", "")).join(" ");
-                const bioData = fullText.split(".").map(e => e.trim()).filter(e => e)
-                const reg = /(.*) has starred in ([0-9]*) movies/;
-                const test = bioData[bioData.length - 1].match(reg);
-                treatedAttr.push("Movies count: " + test[2]);
-                data.movies_count = test[2]
-            }
+            // // 5. Movies count
+            // const biographyNode = root?.querySelector("div[id='biography']");
+            // if (biographyNode) {
+            //     const allTexts = extractText(biographyNode);
+            //     const fullText = allTexts.map(e => e.trim().replaceAll("\r", "").replaceAll("\t", "").replaceAll("\n", "")).join(" ");
+            //     const bioData = fullText.split(".").map(e => e.trim()).filter(e => e)
+            //     const reg = /(.*) has starred in ([0-9]*) movies/;
+            //     const test = bioData[bioData.length - 1].match(reg);
+            //     treatedAttr.push("Movies count: " + test[2]);
+            //     data.movies_count = test[2]
+            // }
             personalDataCollected = true;
         }
+
 
         //// GET CENSORED MOVIES DATA
         {
@@ -199,7 +476,6 @@ async function crawlIdol(name) {
                     favorite: null,
                     actress: null,
                     note: null,
-                    thumbs: null
                 });
             }
 
@@ -256,30 +532,30 @@ async function crawlIdol(name) {
         } else {
             console.log("🔥 Gonna crawl from url:", url);
             try {
-                // const res = await axios.get(url, {
-                //     "headers": {
-                //         "sec-ch-ua": "\"Not;A=Brand\";v=\"99\", \"Google Chrome\";v=\"139\", \"Chromium\";v=\"139\"",
-                //         "sec-ch-ua-mobile": "?0",
-                //         "sec-ch-ua-platform": "\"Windows\"",
-                //         "upgrade-insecure-requests": "1",
-                //         "Referer": "https://www.javdatabase.com/"
-                //     }
-                // });
+                const res = await axios.get(url, {
+                    "headers": {
+                        "sec-ch-ua": "\"Not;A=Brand\";v=\"99\", \"Google Chrome\";v=\"139\", \"Chromium\";v=\"139\"",
+                        "sec-ch-ua-mobile": "?0",
+                        "sec-ch-ua-platform": "\"Windows\"",
+                        "upgrade-insecure-requests": "1",
+                        "Referer": "https://www.javdatabase.com/"
+                    }
+                });
 
-                // if (res.status !== 200) {
-                //     throw new Error(`Failed to fetch data for model ${name}. Status: ${response.status}`);
-                // }
-
-                // htmlContentRoot = res.data;
-                // fs.writeFileSync(htmlFilePath, htmlContentRoot);
-
-                const redirectSuccess = await redirectPageUrl("profile1", url, htmlFilePath);
-                if (!redirectSuccess) {
-                    console.log("nope");
-                    return null;
+                if (res.status !== 200) {
+                    throw new Error(`Failed to fetch data for model ${name}. Status: ${response.status}`);
                 }
-                console.log("ok hehree");
-                htmlContentRoot = fs.readFileSync(htmlFilePath, "utf-8");
+
+                htmlContentRoot = res.data;
+                fs.writeFileSync(htmlFilePath, htmlContentRoot);
+
+                // const redirectSuccess = await redirectPageUrl("profile1", url, htmlFilePath);
+                // if (!redirectSuccess) {
+                //     console.log("nope");
+                //     return null;
+                // }
+                // console.log("ok hehree");
+                // htmlContentRoot = fs.readFileSync(htmlFilePath, "utf-8");
             } catch (error) {
                 console.error(error.message);
                 break;
@@ -349,7 +625,3 @@ async function crawlIdol(name) {
 
     return data;
 }
-
-module.exports = { crawlIdol }
-
-// crawlIdol("saika-kawakita"); 

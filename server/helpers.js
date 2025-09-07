@@ -57,40 +57,39 @@ function createRecordArrayByPropertyName(properties, record) {
     return properties.map((pName) => record[pName]);
 }
 
-async function downloadImageByUrl(url, destFolder, fileName = "", proxy = null) {
+async function downloadImageByUrl(url, destFolder, fileName = "", axiosClient = null) {
     try {
-        const headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
-                '(KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
-            'Accept': 'image/webp,image/apng,image/*,*/*;q=0.8',
-            'Referer': 'https://google.com', // sometimes required
-        };
-
-        const options = {
-            responseType: 'stream',
-            headers,
-            timeout: 10000,
-        };
-
-        if (proxy) {
-            options.proxy = proxy;
-        }
-
         // get File name
         fileName = fileName ? fileName : getFileNameFromUrl(url);
-
         const destPath = path.join(destFolder, fileName);
         if (fs.existsSync(destPath)) {
             console.log(`⚠️  ${fileName} downloaded.`);
             return true;
         }
 
+        const headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
+            'Accept': 'image/webp,image/apng,image/*,*/*;q=0.8',
+            'Referer': 'https://google.com', // sometimes required
+        };
+
         // Ensure directory exists
         fs.mkdirSync(path.dirname(destFolder), { recursive: true });
 
-        const response = await axios.get(url, options);
-        const writer = fs.createWriteStream(destPath);
+        const response = axiosClient
+            ? await axiosClient.get(url)
+            : await axios.get(url, {
+                responseType: 'stream',
+                timeout: 10000,
+                headers,
+            })
 
+        // const response = await axios.get(url, {
+        //     responseType: 'stream',
+        //     timeout: 10000,
+        //     headers,
+        // });
+        const writer = fs.createWriteStream(destPath);
         response.data.pipe(writer);
         await new Promise((resolve, reject) => {
             writer.on('finish', resolve);
@@ -278,7 +277,6 @@ function updateHTMLTemplate(idolData, moviesData) {
 
     // movie thumbs / jjgirl images
     let movieDisplayCount = 1;
-    // Todo: shuffle movies array
     const shuffledMoviesData = shuffleArray(moviesData);
     if (moviesData.length > 0) {
         for (const movie of shuffledMoviesData) {

@@ -40,8 +40,7 @@ router.post('/search', async (req, res) => {
     try {
         const { name, updateRecord, displayType } = req.body;
         const curName = treatIdolName(name);
-        console.log("👩  ", curName);
-        console.log("\n");
+        console.log("\n👩  ", curName);
 
         // Todo: check the inversed name
 
@@ -120,18 +119,25 @@ router.post('/search', async (req, res) => {
         }
 
         // 4.3 idol - movie
-        const idolMovies = idolData?.movies ? idolData.movies.map(movie => ({ movie_code: movie.code, idol_name: curName })) : [];
+        const idolMovies = idolData?.movies
+            ? idolData.movies.map(movie => ({
+                movie_code: movie.code,
+                idol_name: curName
+            }))
+            : [];
 
         // 4.4 movies
-        const movies = idolData?.movies ? idolData.movies.map(movie => ({
-            code: movie.code,
-            title: movie.desc,
-            release_date: movie.releaseDate,
-            thumbs_short: movie.thumbsShort,
-            movieLink: movie.movieLink,
-            created_time: Date.now(),
-            updated_time: Date.now(),
-        })) : [];
+        const movies = idolData?.movies
+            ? idolData.movies.map(movie => ({
+                code: movie.code,
+                title: movie.desc,
+                release_date: movie.releaseDate,
+                thumbs_short: movie.thumbsShort,
+                movieLink: movie.movieLink,
+                created_time: Date.now(),
+                updated_time: Date.now()
+            }))
+            : [];
 
         // 5. save to db
         // 5.1 save idol

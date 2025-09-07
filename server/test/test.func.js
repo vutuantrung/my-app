@@ -250,6 +250,7 @@ function check() {
 }
 
 const path = require('path');
+const { ProxyRotator } = require("../services/proxy.service.js");
 
 function saveBase64VideoAsMp4(base64Data, outputFilePath) {
     // Remove the data URI prefix if present
@@ -353,3 +354,22 @@ function saveBase64VideoAsMp4(base64Data, outputFilePath) {
 //https://pics.dmm.co.jp/digital/video/sone00311/sone00311jp-1.jpg
 
 //https://www.javdatabase.com/covers/full/mi/mikr00038pl.webp
+
+
+// ---------- Example usage ----------
+// (async () => {
+//     const rotator = new ProxyRotator("round-robin"); // or "random"
+
+//     // Rotate per request
+//     for (let n = 0; n < 3; n++) {
+//         const client = rotator.axiosForNextProxy();
+//         try {
+//             const res = await client.get("https://www.javdatabase.com/idols/yurika-hiyama/");
+//             console.log("Used proxy:", client._proxy.url, "->", res.data);
+//             await sleep(10000);
+//         } catch (err) {
+//             console.error("Request failed via", client._proxy.url, "-", err.message);
+//             // You could retry with the next proxy here if desired
+//         }
+//     }
+// })();

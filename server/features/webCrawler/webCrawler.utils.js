@@ -1,8 +1,3 @@
-const { parseDocument } = require('htmlparser2');
-const { DomUtils } = require('htmlparser2');
-const { parse } = require('node-html-parser');
-const fs = require("fs");
-
 function extractText(node, texts = []) {
     if (node.nodeType === 3) { // TEXT_NODE
         const trimmed = node.rawText.trim();
@@ -108,29 +103,4 @@ function extractRawNamesIdol(node) {
     return tags;
 }
 
-function parseUsingOtherPackage(htmlString, className) {
-    // Parse into a DOM-like structure
-    const dom = parseDocument(htmlString);
-
-    fs.writeFileSync("./test2.html", htmlString);
-    // console.log(htmlString)
-
-    // Find all elements with class "row"
-    const rows = DomUtils.findAll(
-        (elem) =>
-            elem.attribs &&
-            elem.attribs.class &&
-            elem.attribs.class.split(' ').includes(className),
-        dom.children
-    );
-    // console.log(rows);
-
-    let ele = null;
-    if (rows.length > 0) {
-        // console.log(DomUtils.getText(rows[0]));
-        ele = parse(DomUtils.getText(rows[0]));
-    }
-    return ele;
-}
-
-module.exports = { extractText, extractDataFromHref, extractRawNamesIdol, parseUsingOtherPackage }
+module.exports = { extractText, extractDataFromHref, extractRawNamesIdol }
