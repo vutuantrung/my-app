@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Film Poster (Responsive, Cast & Content IDs)</title>
+    <style>
+        :root {
+            --bg: #0b0c10;
+            --fg: #151518;
+            --muted: #a7a9b2;
+            --accent: #7aa2ff;
+            --chip-bg: #1a1c22;
+            --chip-fg: #d9d9df;
+            --ring: color-mix(in oklab, var(--accent) 60%, white 0%);
+            --radius: 16px;
+            --shadow: 0 10px 24px rgba(0, 0, 0, .38);
+            --poster-w: min(96vw, 980px);
+            --gap: clamp(10px, 1.6vw, 18px);
+            --fs-title: clamp(1.15rem, 2.8vw, 1.9rem);
+            --fs-meta: clamp(.8rem, 1.1vw, .95rem);
+            --fs-small: clamp(.7rem, .9vw, .78rem);
+            --chip-pad: 4px 8px;
+            --kv-pad: 10px 12px;
+            --thumb-gap: 8px;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #f7f7f9;
+                --fg: #14151a;
+                --muted: #5a5f6a;
+                --chip-bg: #ececf1;
+                --chip-fg: #1d1f24;
+                --shadow: 0 8px 20px rgba(10, 10, 20, .10);
+            }
+        }
+
+        * {
+            box-sizing: border-box
+        }
+
+        html,
+        body {
+            height: 100%
+        }
+
+        body {
+            margin: 0;
+            display: grid;
+            place-items: center;
+            background: var(--bg);
+            color: var(--fg);
+            font: 500 14px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Inter, Ubuntu, "Helvetica Neue", Arial, ui-sans-serif;
+            padding: 10px;
+        }
+
+        .poster {
+            width: var(--poster-w);
+            background:
+                radial-gradient(1000px 500px at 80% -20%, color-mix(in oklab, var(--accent) 16%, transparent), transparent),
+                linear-gradient(180deg, color-mix(in oklab, var(--bg) 92%, black 8%), var(--bg));
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            overflow: clip;
+            border: 1px solid color-mix(in oklab, var(--fg) 8%, transparent);
+        }
+
+        .poster__media {
+            position: relative;
+            aspect-ratio: 16/9;
+            overflow: hidden;
+            background: #111
+        }
+
+        .poster__media img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block
+        }
+
+        .poster__badge {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: color-mix(in oklab, var(--bg) 45%, var(--accent) 20%);
+            backdrop-filter: blur(6px);
+            border: 1px solid color-mix(in oklab, var(--fg) 12%, transparent);
+            padding: 4px 8px;
+            border-radius: 999px;
+            font-size: var(--fs-small);
+            line-height: 1;
+        }
+
+        .poster__body {
+            display: grid;
+            gap: var(--gap);
+            padding: clamp(12px, 2vw, 18px)
+        }
+
+        .poster__title {
+            font-size: var(--fs-title);
+            line-height: 1.15;
+            font-weight: 800;
+            letter-spacing: .2px;
+            margin: 0
+        }
+
+        .poster__meta {
+            display: grid;
+            gap: 8px;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        }
+
+        .kv {
+            padding: var(--kv-pad);
+            background: color-mix(in oklab, var(--bg) 86%, black 14%);
+            border: 1px solid color-mix(in oklab, var(--fg) 10%, transparent);
+            border-radius: 10px;
+            min-height: 58px;
+        }
+
+        .kv_2 {
+            grid-column-start: 3;
+            grid-column-end: 6;
+
+            padding: var(--kv-pad);
+            background: color-mix(in oklab, var(--bg) 86%, black 14%);
+            border: 1px solid color-mix(in oklab, var(--fg) 10%, transparent);
+            border-radius: 10px;
+            min-height: 58px;
+            width: 100%;
+        }
+
+        .kv__k {
+            display: block;
+            font-size: var(--fs-small);
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            color: var(--muted)
+        }
+
+        .kv__v {
+            display: block;
+            font-size: var(--fs-meta);
+            margin-top: 4px;
+            font-weight: 600
+        }
+
+        /* Full-width rows */
+        .kv--cast {
+            grid-column: 1 / -1;
+        }
+
+        .kv--id {
+            grid-column: 1 / -1;
+        }
+
+        .spanText {
+            color: var(--chip-fg);
+        }
+
+        /* Chips (cast + content IDs) */
+        .chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 6px;
+            max-height: clamp(96px, 24vh, 160px);
+            overflow: auto;
+            padding-right: 2px;
+            scrollbar-width: thin;
+        }
+
+        .chip {
+            background: var(--chip-bg);
+            color: var(--chip-fg);
+            border: 1px solid color-mix(in oklab, var(--fg) 12%, transparent);
+            padding: var(--chip-pad);
+            border-radius: 999px;
+            font-size: .78rem;
+            line-height: 1;
+            white-space: nowrap;
+        }
+
+        .chip--id {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+            letter-spacing: .02em;
+            opacity: .95;
+        }
+
+        /* Thumbnails */
+        .thumbs {
+            display: grid;
+            gap: var(--thumb-gap);
+            grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+            container-type: inline-size;
+        }
+
+        @container (max-width:560px) {
+            .thumbs {
+                grid-template-columns: repeat(3, 1fr)
+            }
+        }
+
+        .thumb {
+            aspect-ratio: 1/1;
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+            border: 1px solid color-mix(in oklab, var(--fg) 10%, transparent);
+            background: #121318;
+            transition: transform .16s ease, box-shadow .16s ease;
+        }
+
+        .thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block
+        }
+
+        .thumb:focus-visible,
+        .thumb:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 18px rgba(0, 0, 0, .30);
+            outline: 2px solid var(--ring);
+            outline-offset: 2px;
+        }
+
+        .poster__footer {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 clamp(12px, 2vw, 18px) clamp(12px, 2vw, 18px);
+        }
+
+        .id {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+            font-size: .8rem;
+            color: var(--muted);
+            background: color-mix(in oklab, var(--bg) 86%, black 14%);
+            border: 1px dashed color-mix(in oklab, var(--fg) 18%, transparent);
+            padding: 6px 8px;
+            border-radius: 8px;
+        }
+
+        .cta {
+            margin-left: auto;
+            border: 1px solid color-mix(in oklab, var(--accent) 50%, white 0%);
+            padding: 8px 12px;
+            border-radius: 10px;
+            font-weight: 700;
+            letter-spacing: .2px;
+            background: linear-gradient(180deg, color-mix(in oklab, var(--accent) 28%, transparent), transparent);
+            color: var(--fg);
+            text-decoration: none;
+            font-size: .86rem;
+        }
+
+        @media (max-width: 520px) {
+            .poster__title {
+                letter-spacing: .1px
+            }
+
+            .kv {
+                min-height: auto
+            }
+        }
+
+        @media print {
+            body {
+                background: #fff
+            }
+
+            .poster {
+                box-shadow: none;
+                border-color: #ddd
+            }
+
+            .cta {
+                display: none
+            }
+
+            .chips {
+                max-height: none;
+                overflow: visible
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <article class="poster" itemscope itemtype="https://schema.org/Movie" aria-label="Film poster">
+        <div class="poster__media" id="posterImage"></div>
+
+        <div class="poster__body">
+            <h1 class="poster__title" itemprop="name" id="title"></h1>
+
+            <section class="poster__meta" aria-label="Film metadata">
+                <div class="kv">
+                    <span class="kv__k">Release Date</span>
+                    <time class="kv__v" itemprop="datePublished" id="releaseDate"></time>
+                </div>
+                <div class="kv">
+                    <span class="kv__k">Runtime</span>
+                    <span class="kv__v"><time itemprop="duration" id="runTime"></time></span>
+                </div>
+
+                <!-- CONTENT ID: full-width row with multiple chips -->
+                <div class="kv_2">
+                    <span class="kv__k">Tags</span>
+                    <div class="chips" aria-label="Tags" id="tags"></div>
+                </div>
+
+                <!-- CAST: own full-width row -->
+                <div class="kv kv--cast">
+                    <span class="kv__k">Actress(es) <span id="castsCount"></span></span>
+                    <div class="chips" aria-label="Cast" id="casts"></div>
+                </div>
+            </section>
+
+            <!-- Exactly 20 thumbnails -->
+            <section class="thumbs" aria-label="Thumbnail images" id="thumbnails"></section>
+        </div>
+
+        <footer class="poster__footer">
+            <code class="id" aria-label="Canonical ID" id="movieCode"></code>
+            <a class="cta" href="#" role="button" aria-label="Primary action">Watch Trailer</a>
+        </footer>
+    </article>
+
+</body>
+
+</html>

@@ -206,7 +206,7 @@ async function checkNameJAVHerExist(name, proxyService) {
 // 1. movies data
 // 2. movies_count
 // 3. query name
-async function crawlIdolFromJAVHer(name, recrawl) {
+async function crawlIdolFromJAVHer(name, recrawl = false) {
     console.log("\n[JAVHer]---------------");
 
     const RETRY_TIMES = 3;

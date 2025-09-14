@@ -15,7 +15,7 @@ async function searchMovieByCode(code = '') {
     let params = [];
 
     if (terms.length > 0) {
-        const orClause = terms.map(() => 'code LIKE ?').join(' OR ');
+        const orClause = terms.map(() => 'movie_code LIKE ?').join(' OR ');
         query += ` WHERE ${orClause}`;
         params = terms.map(term => `%${term}%`);
     }
@@ -43,9 +43,9 @@ async function searchMovieByIdolName(idolName) {
     });
 }
 
-async function searchIdolByMovieCode(movieCode) {
+async function searchIdolsByMovieCode(movieCode) {
     return new Promise((resolve, reject) => {
-        db.get(`SELECT * FROM idol_movie WHERE code = ?`,
+        db.all(`SELECT * FROM idol_movie WHERE movie_code = ?`,
             [movieCode],
             (err, row) => {
                 if (err) {
@@ -76,4 +76,4 @@ async function createIdolMovies(idolMovies) {
     })
 }
 
-module.exports = { createIdolMovies, searchIdolByMovieCode, searchMovieByIdolName }
+module.exports = { createIdolMovies, searchIdolsByMovieCode, searchMovieByIdolName }

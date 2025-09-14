@@ -1,20 +1,20 @@
 const fs = require("fs");
-const path = require("path");
+const crypto = require('crypto');
 const express = require('express');
 const router = express.Router();
-const crypto = require('crypto');
+const path = require("path");
 
 const idolDbServices = require("../services/idol.service.database");
 const movieDbServices = require("../services/movie.service.database");
 const movieCrawlingServices = require("../services/movie.service.crawl")
 const idolMovieDbServices = require("../services/idolMovie.services.database");
 const idolCrawlingServices = require("../services/idol.service.crawl");
-const { treatMovieCode } = require("../helpers");
+const { treatMovieCode, renderMovieHTMLTemplte } = require("../helpers");
 
 // SEARCH
 router.post('/search', async (req, res) => {
     try {
-        const { code, url, updateRecord } = req.body;
+        const { code, url, updateRecord, displayType } = req.body;
         if (!code && !url) {
             throw new Error("Invalid inputs");
         }
@@ -44,7 +44,14 @@ router.post('/search', async (req, res) => {
             throw new Error(err.message);
         }
         if (moviesFound.data.length > 0 && !updateRecord) {
-            res.status(200).send(JSON.stringify(moviesFound.data));
+            const searchIdolsReq = await idolMovieDbServices.searchIdolsByMovieCode(curCode);
+            const idolList = searchIdolsReq.map(e => e.idol_name);
+
+            let resultSendback = displayType === "json"
+                ? JSON.stringify(moviesFound.data)
+                : renderMovieHTMLTemplte(moviesFound.data[0], idolList);
+
+            res.status(200).send(resultSendback);
             return;
         }
         // 3. crawl from internet
@@ -109,9 +116,13 @@ router.post('/search', async (req, res) => {
 
         // 5.3 save idol - movie (s)
         const createIdolMovies = await idolMovieDbServices.createIdolMovies(idolMovies);
-        console.log('[createIdolMovies]', createIdolMovies)
+        console.log('[createIdolMovies]', createIdolMovies);
 
-        res.status(200).send(JSON.stringify([movie]));
+        let resultSendback = displayType === "json"
+            ? JSON.stringify(moviesFound.data)
+            : renderMovieHTMLTemplte(movie, idols.map(e => e.name));
+
+        res.status(200).send(resultSendback);
     } catch (error) {
         console.log(error);
         res.status(500).send(error.message);

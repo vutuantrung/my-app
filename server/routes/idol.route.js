@@ -7,7 +7,7 @@ const idolDbServices = require("../services/idol.service.database");
 const movieDbServices = require("../services/movie.service.database");
 const idolMovieDbServices = require("../services/idolMovie.services.database");
 const idolCrawlingServices = require("../services/idol.service.crawl");
-const { treatIdolName, updateHTMLTemplate, render404Page, shuffleArray } = require("../helpers");
+const { parseIdolName, renderIdolHTMLTemplate, render404Page, shuffleArray } = require("../helpers");
 const { crawlIdolFromJJGirl } = require("../features/jjgirls/jjgirls.utils");
 
 // CREATE
@@ -42,7 +42,7 @@ router.post('/search', async (req, res) => {
         const { name, updateRecord, displayType } = req.body;
         let [name_jdb, name_jher, name_jjg] = name.split(",");
 
-        const mainName = treatIdolName(name_jdb).replace("_", "");// REMOVE UNDER_SCORE
+        const mainName = parseIdolName(name_jdb).replace("_", "");// REMOVE UNDER_SCORE
         console.log("\n👩  ", mainName);
 
         // 1. search in db
@@ -54,7 +54,7 @@ router.post('/search', async (req, res) => {
             throw new Error(err.message);
         }
         // console.log('[idolsFound]', idolsFound);
-        if (idolsFound.data.length > 0 && !TESTING) {
+        if (idolsFound.data.length > 0 && !updateRecord) {
             const searchMoviesReq = await idolMovieDbServices.searchMovieByIdolName(mainName);
             const moviesCode = searchMoviesReq.map(e => e.movie_code);
             const shuffledMoviesCode = shuffleArray(moviesCode).slice(0, 8).filter(Boolean);
@@ -62,7 +62,7 @@ router.post('/search', async (req, res) => {
             // console.log(moviesDataReq);
             let resultSendback = displayType === "json"
                 ? JSON.stringify(idolsFound.data[0])
-                : updateHTMLTemplate(idolsFound.data[0], moviesDataReq.data);
+                : renderIdolHTMLTemplate(idolsFound.data[0], moviesDataReq.data);
 
             res.status(200).send(resultSendback);
             return;
@@ -79,11 +79,11 @@ router.post('/search', async (req, res) => {
             idolData = JSON.parse(d);
         } else {
             const tmp_name_jher = name_jher
-                ? (name_jher[0] === "_" ? name_jher : treatIdolName(name_jher))
-                : (name_jdb[0] === "_" ? name_jdb : treatIdolName(name_jdb));
+                ? (name_jher[0] === "_" ? name_jher : parseIdolName(name_jher))
+                : (name_jdb[0] === "_" ? name_jdb : parseIdolName(name_jdb));
             const tmp_name_jjg = name_jjg
-                ? name_jjg[0] === "_" ? name_jjg : treatIdolName(name_jjg)
-                : (name_jdb[0] === "_" ? name_jdb : treatIdolName(name_jdb));
+                ? name_jjg[0] === "_" ? name_jjg : parseIdolName(name_jjg)
+                : (name_jdb[0] === "_" ? name_jdb : parseIdolName(name_jdb));
 
             if (idolsFound.data.length > 0) {
                 const savedRecord = idolsFound.data[0];
@@ -92,7 +92,7 @@ router.post('/search', async (req, res) => {
                 name_jher = metadata.javherQueryName ? "_" + metadata.javherQueryName : tmp_name_jher;
                 name_jjg = metadata.jjGirlQueryName ? "_" + metadata.jjGirlQueryName : tmp_name_jjg;
             } else {
-                name_jdb = name_jdb[0] === "_" ? name_jdb : treatIdolName(name_jdb);
+                name_jdb = name_jdb[0] === "_" ? name_jdb : parseIdolName(name_jdb);
                 name_jher = tmp_name_jher;
                 name_jjg = tmp_name_jjg;
             }
@@ -154,7 +154,7 @@ router.post('/search', async (req, res) => {
 
         let resultSendback = displayType === "json"
             ? JSON.stringify(idol)
-            : updateHTMLTemplate(idol, movies);
+            : renderIdolHTMLTemplate(idol, movies);
         res.status(200).send(resultSendback);
     } catch (error) {
         console.error(error);

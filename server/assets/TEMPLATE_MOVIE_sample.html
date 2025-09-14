@@ -1,0 +1,430 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Film Poster (Responsive, Cast & Content IDs)</title>
+    <style>
+        :root {
+            --bg: #0b0c10;
+            --fg: #e8e8ea;
+            --muted: #a7a9b2;
+            --accent: #7aa2ff;
+            --chip-bg: #1a1c22;
+            --chip-fg: #d9d9df;
+            --ring: color-mix(in oklab, var(--accent) 60%, white 0%);
+            --radius: 16px;
+            --shadow: 0 10px 24px rgba(0, 0, 0, .38);
+            --poster-w: min(96vw, 980px);
+            --gap: clamp(10px, 1.6vw, 18px);
+            --fs-title: clamp(1.15rem, 2.8vw, 1.9rem);
+            --fs-meta: clamp(.8rem, 1.1vw, .95rem);
+            --fs-small: clamp(.7rem, .9vw, .78rem);
+            --chip-pad: 4px 8px;
+            --kv-pad: 10px 12px;
+            --thumb-gap: 8px;
+        }
+
+        @media (prefers-color-scheme: light) {
+            :root {
+                --bg: #f7f7f9;
+                --fg: #14151a;
+                --muted: #5a5f6a;
+                --chip-bg: #ececf1;
+                --chip-fg: #1d1f24;
+                --shadow: 0 8px 20px rgba(10, 10, 20, .10);
+            }
+        }
+
+        * {
+            box-sizing: border-box
+        }
+
+        html,
+        body {
+            height: 100%
+        }
+
+        body {
+            margin: 0;
+            display: grid;
+            place-items: center;
+            background: var(--bg);
+            color: var(--fg);
+            font: 500 14px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Inter, Ubuntu, "Helvetica Neue", Arial, ui-sans-serif;
+            padding: 10px;
+        }
+
+        .poster {
+            width: var(--poster-w);
+            background:
+                radial-gradient(1000px 500px at 80% -20%, color-mix(in oklab, var(--accent) 16%, transparent), transparent),
+                linear-gradient(180deg, color-mix(in oklab, var(--bg) 92%, black 8%), var(--bg));
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            overflow: clip;
+            border: 1px solid color-mix(in oklab, var(--fg) 8%, transparent);
+        }
+
+        .poster__media {
+            position: relative;
+            aspect-ratio: 16/9;
+            overflow: hidden;
+            background: #111
+        }
+
+        .poster__media img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block
+        }
+
+        .poster__badge {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: color-mix(in oklab, var(--bg) 45%, var(--accent) 20%);
+            backdrop-filter: blur(6px);
+            border: 1px solid color-mix(in oklab, var(--fg) 12%, transparent);
+            padding: 4px 8px;
+            border-radius: 999px;
+            font-size: var(--fs-small);
+            line-height: 1;
+        }
+
+        .poster__body {
+            display: grid;
+            gap: var(--gap);
+            padding: clamp(12px, 2vw, 18px)
+        }
+
+        .poster__title {
+            font-size: var(--fs-title);
+            line-height: 1.15;
+            font-weight: 800;
+            letter-spacing: .2px;
+            margin: 0
+        }
+
+        .poster__meta {
+            display: grid;
+            gap: 8px;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        }
+
+        .kv {
+            padding: var(--kv-pad);
+            background: color-mix(in oklab, var(--bg) 86%, black 14%);
+            border: 1px solid color-mix(in oklab, var(--fg) 10%, transparent);
+            border-radius: 10px;
+            min-height: 58px;
+        }
+
+        .kv_2 {
+            grid-column-start: 3;
+            grid-column-end: 6;
+
+            padding: var(--kv-pad);
+            background: color-mix(in oklab, var(--bg) 86%, black 14%);
+            border: 1px solid color-mix(in oklab, var(--fg) 10%, transparent);
+            border-radius: 10px;
+            min-height: 58px;
+            width: 100%;
+        }
+
+        .kv__k {
+            display: block;
+            font-size: var(--fs-small);
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            color: var(--muted)
+        }
+
+        .kv__v {
+            display: block;
+            font-size: var(--fs-meta);
+            margin-top: 4px;
+            font-weight: 600
+        }
+
+        /* Full-width rows */
+        .kv--cast {
+            grid-column: 1 / -1;
+        }
+
+        .kv--id {
+            grid-column: 1 / -1;
+        }
+
+        /* Chips (cast + content IDs) */
+        .chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 6px;
+            max-height: clamp(96px, 24vh, 160px);
+            overflow: auto;
+            padding-right: 2px;
+            scrollbar-width: thin;
+        }
+
+        .chip {
+            background: var(--chip-bg);
+            color: var(--chip-fg);
+            border: 1px solid color-mix(in oklab, var(--fg) 12%, transparent);
+            padding: var(--chip-pad);
+            border-radius: 999px;
+            font-size: .78rem;
+            line-height: 1;
+            white-space: nowrap;
+        }
+
+        .chip--id {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+            letter-spacing: .02em;
+            opacity: .95;
+        }
+
+        /* Thumbnails */
+        .thumbs {
+            display: grid;
+            gap: var(--thumb-gap);
+            grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+            container-type: inline-size;
+        }
+
+        @container (max-width:560px) {
+            .thumbs {
+                grid-template-columns: repeat(3, 1fr)
+            }
+        }
+
+        .thumb {
+            aspect-ratio: 1/1;
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+            border: 1px solid color-mix(in oklab, var(--fg) 10%, transparent);
+            background: #121318;
+            transition: transform .16s ease, box-shadow .16s ease;
+        }
+
+        .thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block
+        }
+
+        .thumb:focus-visible,
+        .thumb:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 18px rgba(0, 0, 0, .30);
+            outline: 2px solid var(--ring);
+            outline-offset: 2px;
+        }
+
+        .poster__footer {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 clamp(12px, 2vw, 18px) clamp(12px, 2vw, 18px);
+        }
+
+        .id {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+            font-size: .8rem;
+            color: var(--muted);
+            background: color-mix(in oklab, var(--bg) 86%, black 14%);
+            border: 1px dashed color-mix(in oklab, var(--fg) 18%, transparent);
+            padding: 6px 8px;
+            border-radius: 8px;
+        }
+
+        .cta {
+            margin-left: auto;
+            border: 1px solid color-mix(in oklab, var(--accent) 50%, white 0%);
+            padding: 8px 12px;
+            border-radius: 10px;
+            font-weight: 700;
+            letter-spacing: .2px;
+            background: linear-gradient(180deg, color-mix(in oklab, var(--accent) 28%, transparent), transparent);
+            color: var(--fg);
+            text-decoration: none;
+            font-size: .86rem;
+        }
+
+        @media (max-width: 520px) {
+            .poster__title {
+                letter-spacing: .1px
+            }
+
+            .kv {
+                min-height: auto
+            }
+        }
+
+        @media print {
+            body {
+                background: #fff
+            }
+
+            .poster {
+                box-shadow: none;
+                border-color: #ddd
+            }
+
+            .cta {
+                display: none
+            }
+
+            .chips {
+                max-height: none;
+                overflow: visible
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <article class="poster" itemscope itemtype="https://schema.org/Movie" aria-label="Film poster">
+        <div class="poster__media">
+            <img src="https://pics.dmm.co.jp/digital/video/ymdd00344/ymdd00344pl.jpg" alt="Poster artwork for the film"
+                itemprop="image" loading="eager" decoding="async" />
+            <span class="poster__badge" aria-label="Release status">Now Streaming</span>
+        </div>
+
+        <div class="poster__body">
+            <h1 class="poster__title" itemprop="name">YMDD-344 Amateur Observation Monitoring A Soggy Glamorous Older
+                Sister Bewitchingly Captures Amateurs And Sucks And Fucks! ! Lewd Temptation DVD Store Edition & Amateur
+                Hunting Park Edition Akari Shinmura</h1>
+
+            <section class="poster__meta" aria-label="Film metadata">
+                <div class="kv">
+                    <span class="kv__k">Release Date</span>
+                    <time class="kv__v" itemprop="datePublished" id="releaseDate">Aug 22, 2025</time>
+                </div>
+                <div class="kv">
+                    <span class="kv__k">Runtime</span>
+                    <span class="kv__v"><time itemprop="duration" id="runtTime">1h 48m</time></span>
+                </div>
+
+                <!-- CONTENT ID: full-width row with multiple chips -->
+                <div class="kv_2">
+                    <span class="kv__k">Tags</span>
+                    <div class="chips" aria-label="Tags" id="tags">
+                        <span class="chip chip--id" itemprop="identifier">Exclusive Distribution</span>
+                        <span class="chip chip--id" itemprop="identifier">Cowgirl</span>
+                        <span class="chip chip--id" itemprop="identifier">Featured Actress</span>
+                        <span class="chip chip--id" itemprop="identifier">Blowjob</span>
+                        <span class="chip chip--id" itemprop="identifier">Slut</span>
+                        <span class="chip chip--id" itemprop="identifier">Creampie</span>
+                    </div>
+                </div>
+
+                <!-- CAST: own full-width row -->
+                <div class="kv kv--cast">
+                    <span class="kv__k">Actress(es) <span id="castsCount"></span></span>
+                    <div class="chips" aria-label="Cast" id="casts">
+                        <span class="chip">Akari Niimura</span>
+                        <span class="chip">Marin Ortega</span>
+                        <span class="chip">Keiko Tanaka</span>
+                        <span class="chip">Nadia Karim</span>
+                        <span class="chip">Iris Park</span>
+                        <span class="chip">Helena Zhou</span>
+                        <span class="chip">Rina Patel</span>
+                        <span class="chip">Callie Brooks</span>
+                        <span class="chip">Luna García</span>
+                        <span class="chip">Zoë Martin</span>
+                        <span class="chip">Maya Singh</span>
+                        <span class="chip">Noor Al-Sayeed</span>
+                        <span class="chip">Elise Laurent</span>
+                        <span class="chip">Chiara Rossi</span>
+                        <span class="chip">Ines Novak</span>
+                        <span class="chip">Sara Ahmed</span>
+                        <span class="chip">Yuki Sato</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Exactly 20 thumbnails -->
+            <section class="thumbs" aria-label="Thumbnail images">
+                <a class="thumb" href="https://pics.dmm.co.jp/digital/video/ymdd00344/ymdd00344jp-1.jpg"
+                    aria-label="Scene 1">
+                    <img src="https://pics.dmm.co.jp/digital/video/ymdd00344/ymdd00344-1.jpg" alt="Scene 1"
+                        loading="lazy" decoding="async">
+                </a>
+                <a class="thumb" href="https://pics.dmm.co.jp/digital/video/ymdd00344/ymdd00344jp-2.jpg"
+                    aria-label="Scene 2"><img src="https://pics.dmm.co.jp/digital/video/ymdd00344/ymdd00344-2.jpg"
+                        alt="Scene 2" loading="lazy" decoding="async"></a>
+                <a class="thumb" href="https://pics.dmm.co.jp/digital/video/ymdd00344/ymdd00344jp-3.jpg"
+                    aria-label="Scene 3"><img src="https://pics.dmm.co.jp/digital/video/ymdd00344/ymdd00344-3.jpg"
+                        alt="Scene 3" loading="lazy" decoding="async"></a>
+                <a class="thumb" href="https://pics.dmm.co.jp/digital/video/ymdd00344/ymdd00344jp-4.jpg"
+                    aria-label="Scene 4"><img src="https://pics.dmm.co.jp/digital/video/ymdd00344/ymdd00344-4.jpg"
+                        alt="Scene 4" loading="lazy" decoding="async"></a>
+                <a class="thumb" href="https://pics.dmm.co.jp/digital/video/ymdd00344/ymdd00344jp-5.jpg"
+                    aria-label="Scene 5"><img src="https://pics.dmm.co.jp/digital/video/ymdd00344/ymdd00344-5.jpg"
+                        alt="Scene 5" loading="lazy" decoding="async"></a>
+                <a class="thumb" href="https://pics.dmm.co.jp/digital/video/ymdd00344/ymdd00344jp-6.jpg"
+                    aria-label="Scene 6"><img src="https://pics.dmm.co.jp/digital/video/ymdd00344/ymdd00344-6.jpg"
+                        alt="Scene 6" loading="lazy" decoding="async"></a>
+                <a class="thumb" href="https://pics.dmm.co.jp/digital/video/ymdd00344/ymdd00344jp-7.jpg"
+                    aria-label="Scene 7"><img src="https://pics.dmm.co.jp/digital/video/ymdd00344/ymdd00344-7.jpg"
+                        alt="Scene 7" loading="lazy" decoding="async"></a>
+                <a class="thumb" href="https://pics.dmm.co.jp/digital/video/ymdd00344/ymdd00344jp-8.jpg"
+                    aria-label="Scene 8"><img src="https://pics.dmm.co.jp/digital/video/ymdd00344/ymdd00344-8.jpg"
+                        alt="Scene 8" loading="lazy" decoding="async"></a>
+                <a class="thumb" href="https://pics.dmm.co.jp/digital/video/ymdd00344/ymdd00344jp-9.jpg"
+                    aria-label="Scene 9"><img src="https://pics.dmm.co.jp/digital/video/ymdd00344/ymdd00344-9.jpg"
+                        alt="Scene 9" loading="lazy" decoding="async"></a>
+                <a class="thumb" href="https://pics.dmm.co.jp/digital/video/ymdd00344/ymdd00344jp-10.jpg"
+                    aria-label="Scene 10"><img src="https://pics.dmm.co.jp/digital/video/ymdd00344/ymdd00344-10.jpg"
+                        alt="Scene 10" loading="lazy" decoding="async"></a>
+                <a class="thumb" href="https://pics.dmm.co.jp/digital/video/ymdd00344/ymdd00344jp-11.jpg"
+                    aria-label="Scene 11"><img src="https://pics.dmm.co.jp/digital/video/ymdd00344/ymdd00344-11.jpg"
+                        alt="Scene 11" loading="lazy" decoding="async"></a>
+                <a class="thumb" href="https://pics.dmm.co.jp/digital/video/ymdd00344/ymdd00344jp-12.jpg"
+                    aria-label="Scene 12"><img src="https://pics.dmm.co.jp/digital/video/ymdd00344/ymdd00344-12.jpg"
+                        alt="Scene 12" loading="lazy" decoding="async"></a>
+                <a class="thumb" href="https://pics.dmm.co.jp/digital/video/ymdd00344/ymdd00344jp-13.jpg"
+                    aria-label="Scene 13"><img src="https://pics.dmm.co.jp/digital/video/ymdd00344/ymdd00344-13.jpg"
+                        alt="Scene 13" loading="lazy" decoding="async"></a>
+                <a class="thumb" href="https://pics.dmm.co.jp/digital/video/ymdd00344/ymdd00344jp-14.jpg"
+                    aria-label="Scene 14"><img src="https://pics.dmm.co.jp/digital/video/ymdd00344/ymdd00344-14.jpg"
+                        alt="Scene 14" loading="lazy" decoding="async"></a>
+                <a class="thumb" href="https://pics.dmm.co.jp/digital/video/ymdd00344/ymdd00344jp-15.jpg"
+                    aria-label="Scene 15"><img src="https://pics.dmm.co.jp/digital/video/ymdd00344/ymdd00344-15.jpg"
+                        alt="Scene 15" loading="lazy" decoding="async"></a>
+                <a class="thumb" href="https://pics.dmm.co.jp/digital/video/ymdd00344/ymdd00344jp-16.jpg"
+                    aria-label="Scene 16"><img src="https://pics.dmm.co.jp/digital/video/ymdd00344/ymdd00344-16.jpg"
+                        alt="Scene 16" loading="lazy" decoding="async"></a>
+                <a class="thumb" href="https://pics.dmm.co.jp/digital/video/ymdd00344/ymdd00344jp-17.jpg"
+                    aria-label="Scene 17"><img src="https://pics.dmm.co.jp/digital/video/ymdd00344/ymdd00344-17.jpg"
+                        alt="Scene 17" loading="lazy" decoding="async"></a>
+                <a class="thumb" href="https://pics.dmm.co.jp/digital/video/ymdd00344/ymdd00344jp-18.jpg"
+                    aria-label="Scene 18"><img src="https://pics.dmm.co.jp/digital/video/ymdd00344/ymdd00344-18.jpg"
+                        alt="Scene 18" loading="lazy" decoding="async"></a>
+                <a class="thumb" href="https://pics.dmm.co.jp/digital/video/ymdd00344/ymdd00344jp-19.jpg"
+                    aria-label="Scene 19"><img src="https://pics.dmm.co.jp/digital/video/ymdd00344/ymdd00344-19.jpg"
+                        alt="Scene 19" loading="lazy" decoding="async"></a>
+                <a class="thumb" href="https://pics.dmm.co.jp/digital/video/ymdd00344/ymdd00344jp-20.jpg"
+                    aria-label="Scene 20"><img src="https://pics.dmm.co.jp/digital/video/ymdd00344/ymdd00344-20.jpg"
+                        alt="Scene 20" loading="lazy" decoding="async"></a>
+            </section>
+        </div>
+
+        <footer class="poster__footer">
+            <code class="id" aria-label="Canonical ID">YMDD-344</code>
+            <a class="cta" href="#" role="button" aria-label="Primary action">Watch Trailer</a>
+        </footer>
+    </article>
+
+</body>
+
+</html>

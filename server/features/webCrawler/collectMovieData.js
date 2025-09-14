@@ -9,14 +9,14 @@ const { parseDocument } = require('htmlparser2');
 const { selectOne } = require('css-select');
 const render = require("dom-serializer").default;
 const { CACHED_FOLDER, MOVIE_THUMBS_FOLDER } = require('../../constants');
-const { downloadImageByUrl } = require('../../helpers');
+const { downloadImageByUrl, fetchWithRetry } = require('../../helpers');
 const ProxyRotator = require('../../services/proxy.service');
 
 
 const REDOWNLOAD = false;
 const RETRY_TIMES = 3;
 
-async function crawlMovie(movieInfo) {
+async function crawlMovie(movieInfo, recrawl = false) {
     const { code, url } = movieInfo;
     let data = {}, htmlContentRoot = null;
     if (!data.images) data.images = [];
@@ -26,32 +26,18 @@ async function crawlMovie(movieInfo) {
     const htmlFilePath = path.join(CACHED_FOLDER, code.toLowerCase() + ".html");
 
     if (!REDOWNLOAD && fs.existsSync(htmlFilePath)) {
-        console.log("✔️ File already exists:", htmlFilePath);
+        console.log("📌 File already exists:", htmlFilePath);
         htmlContentRoot = fs.readFileSync(htmlFilePath, "utf-8");
     } else {
         console.log("🔥 Gonna crawl from url:", url);
-        for (let i = 0; i < RETRY_TIMES; i++) {
-            try {
-                if (i > 0) console.log("Retry", i + 1, "time(s).");
-                const client = proxyService.axiosForNextProxy();
-                const res = await client.get(url);
-                console.log("Proxy used:", client._proxy.url, url);
-
-                if (res.status !== 200) {
-                    throw new Error(`Failed to fetch data for model ${name}. Status: ${response.status}`);
-                }
-
-                htmlContentRoot = res.data;
-                fs.writeFileSync(htmlFilePath, htmlContentRoot);
-                break;
-            } catch (error) {
-                console.error(error.message);
-                if (error.status === 404) {
-                    return null;
-                }
-            }
-        }
+        htmlContentRoot = await fetchWithRetry(url, {}, proxyService, RETRY_TIMES);
     }
+
+    if (!htmlContentRoot) {
+        console.log("Cannot retrieve html content after retry", RETRY_TIMES, "times");
+        return null;
+    }
+    fs.writeFileSync(htmlFilePath, htmlContentRoot);
 
     const root = parse(htmlContentRoot);
 
@@ -109,7 +95,6 @@ async function crawlMovie(movieInfo) {
         const [a, v] = treatedAttr[i].replace("[*]", "").split(":");
         data[a.replace(" ", "_").toLowerCase()] = v;
     }
-    console.log('[data2]', data);
 
     // delete
     delete data['genre(s)'];
@@ -147,53 +132,39 @@ async function crawlMovie(movieInfo) {
     data = { ...data, ...extractDataFromHref(dataNode) };
 
     //// FETCH DATA FROM JAVHER
-    let apiUrl = `https://javher.com/api/video/watch-${data.content_id}-${(new Date(data.release_date)).getTime()}`,
-        jsonFilePath = path.join(CACHED_FOLDER, code.toLowerCase() + "_javher.json"),
-        jsonDataString = null,
+    const apiUrl = `https://javher.com/api/video/watch-${data.content_id}-${(new Date(data.release_date)).getTime()}`,
+        jsonFilePath = path.join(CACHED_FOLDER, code.toLowerCase() + "_javher.json");
+    let jsonDataString = null,
         jsonData = null;
 
-    if (!REDOWNLOAD && fs.existsSync(jsonFilePath)) {
-        console.log("✔️ File already exists:", jsonFilePath);
+    if (fs.existsSync(jsonFilePath) && !recrawl) {
+        console.log("📌 File already exists:", jsonFilePath);
         jsonDataString = fs.readFileSync(jsonFilePath, "utf-8");
         jsonData = JSON.parse(jsonDataString);
     } else {
-        for (let i = 0; i < RETRY_TIMES; i++) {
-            try {
-                if (i > 0) console.log("Retry", i + 1, "time(s).");
-                const client = proxyService.axiosForNextProxy({
-                    headers: {
-                        'Accept': 'application/json',
-                        'Authorization': 'HAHA_ADAM_HAVE_TO_RESORT_TO_THIS#@!@#',
-                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36',
-                        'Cookie': 'user-country=USN'
-                    }
-                });
-
-                const res = await client.get(apiUrl); console.log("Proxy used:", client._proxy.url, apiUrl);
-                if (res.status !== 200) {
-                    throw new Error(`Failed to fetch data for video ${code}. Status: ${response.status}`);
-                }
-                jsonData = res.data;
-                fs.writeFileSync(jsonFilePath, JSON.stringify(jsonData));
-                break;
-            } catch (error) {
-                console.log(error.message);
-            }
+        console.log("🔥 Fetching api url:", apiUrl);
+        const headers = {
+            'Accept': 'application/json',
+            'Authorization': 'HAHA_ADAM_HAVE_TO_RESORT_TO_THIS#@!@#',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36',
+            'Cookie': 'user-country=USN'
         }
+        jsonData = await fetchWithRetry(apiUrl, headers, proxyService, RETRY_TIMES);
     }
 
     if (!jsonData) {
-        console.log("Fetch failed after retry", RETRY_TIMES, "times");
+        console.log("Fetch data failed after retry", RETRY_TIMES, "times");
         return null;
     }
+    if (jsonData) fs.writeFileSync(jsonFilePath, JSON.stringify(jsonData));
 
     const { success: fetchedSuccess, video: fetchedVideo } = jsonData;
     if (fetchedSuccess) {
         data.images.push(...fetchedVideo.gallery);
-        data.images.push(...fetchedVideo.gallery.map(e => {
-            const [seg1, seg2] = e.split("-");
-            return `${seg1}jp-${seg2}`;
-        }));
+        // data.images.push(...fetchedVideo.gallery.map(e => {
+        //     const [seg1, seg2] = e.split("-");
+        //     return `${seg1}jp-${seg2}`;
+        // }));
         data.images = Array.from(new Set(data.images));// remove dups
     }
 
@@ -202,13 +173,22 @@ async function crawlMovie(movieInfo) {
     // console.log(data);
 
     //// DOWNLOAD MEDIAS
+    // 1. download cover
     if (data.thumbs.cover) {
         await downloadImageByUrl(data.thumbs.cover, MOVIE_THUMBS_FOLDER, data.content_id + "-thumbs-cover.jpg");
     }
+    // 2. download poster
     if (data.thumbs.full) {
         await downloadImageByUrl(data.thumbs.full, MOVIE_THUMBS_FOLDER, data.content_id + "-thumbs-full.jpg");
     }
+    // 3. download scence images
     for (const imageUrl of data.images) {
+        const nameSegs = imageUrl.split("/");
+        const fileName = nameSegs[nameSegs.length - 1];
+        await downloadImageByUrl(imageUrl, MOVIE_THUMBS_FOLDER, fileName);
+    }
+    // 4. download scence covers
+    for (const imageUrl of fetchedVideo.gallery) {
         const nameSegs = imageUrl.split("/");
         const fileName = nameSegs[nameSegs.length - 1];
         await downloadImageByUrl(imageUrl, MOVIE_THUMBS_FOLDER, fileName);
