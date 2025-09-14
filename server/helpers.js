@@ -204,7 +204,6 @@ function dashToTitleCase(input) {
 }
 
 function renderMovieHTMLTemplte(movieData, idolList) {
-    console.log('[renderMovieHTMLTemplte]', movieData, idolList);
     const htmlTemplateString = fs.readFileSync("./assets/TEMPLATE_MOVIE.html", "utf-8");
     const html = parse(htmlTemplateString);
 
@@ -303,6 +302,7 @@ function renderIdolHTMLTemplate(idolData, moviesData) {
     }
 
     const moviesCount = idolData.movies_count;
+    console.log('[moviesCount]', moviesCount);
     if (moviesCount) {
         const ele = `<div class="bio-info"><span class="label">Movies count</span><span class="value">${moviesCount}</span></div>`;
         biosElement.innerHTML += ele;
@@ -376,8 +376,6 @@ function renderIdolHTMLTemplate(idolData, moviesData) {
             </span>`;
         html.querySelector("div[class='tags']").innerHTML += eleTemplate;
     }
-
-
 
     // links
     const javdatabaseLink = `

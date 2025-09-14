@@ -281,7 +281,7 @@ async function crawlIdolFromJAVHer(name, recrawl = false) {
                 const releaseDate2 = new Date(m.releaseDate);
                 const movieLink = `https://javher.com/api/video/watch-${m.contentId}-${releaseDate2.getTime()}`
                 return {
-                    code: m.dvdId.toLowerCase(),
+                    code: m.dvdId?.toLowerCase(),
                     movieLink: movieLink,
                     thumbsShort: m.image.replace("pl.", "ps."),
                     thumbs: m.image,
@@ -305,7 +305,8 @@ async function crawlIdolFromJAVHer(name, recrawl = false) {
             data.movies.push(...videos);
 
         } catch (error) {
-            console.error(error.message);
+            console.log(jsonData.videos);
+            console.error(error);
         } finally {
             pageCount++;
             if (!fileExisted) {

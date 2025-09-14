@@ -74,7 +74,7 @@ router.post('/search', async (req, res) => {
         const exist = fs.existsSync(cachedPath);
 
         let idolData = null;
-        if (exist && !updateRecord) {
+        if (idolsFound.data.length > 0 && !updateRecord) {
             const d = fs.readFileSync(cachedPath, "utf-8");
             idolData = JSON.parse(d);
         } else {
@@ -89,8 +89,8 @@ router.post('/search', async (req, res) => {
                 const savedRecord = idolsFound.data[0];
                 const metadata = JSON.parse(savedRecord.metadata);
                 name_jdb = "_" + savedRecord.name;
-                name_jher = metadata.javherQueryName ? "_" + metadata.javherQueryName : tmp_name_jher;
-                name_jjg = metadata.jjGirlQueryName ? "_" + metadata.jjGirlQueryName : tmp_name_jjg;
+                name_jher = metadata?.javherQueryName ? "_" + metadata.javherQueryName : tmp_name_jher;
+                name_jjg = metadata?.jjGirlQueryName ? "_" + metadata.jjGirlQueryName : tmp_name_jjg;
             } else {
                 name_jdb = name_jdb[0] === "_" ? name_jdb : parseIdolName(name_jdb);
                 name_jher = tmp_name_jher;

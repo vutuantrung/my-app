@@ -48,7 +48,7 @@ async function crawlIdolByName({ name_jdb, name_jher, name_jjg }) {
         const crawledFromJAVHer = await crawlIdolFromJAVHer(name_jher);
         data = {
             ...data,
-            movies_count: crawledFromJAVHer?.movies_count ?? 0,
+            movies_count: crawledFromJAVHer?.movies?.length ?? 0,
             movies: crawledFromJAVHer?.movies ?? [],
             metadata: {
                 ...data.metadata,
@@ -60,15 +60,18 @@ async function crawlIdolByName({ name_jdb, name_jher, name_jjg }) {
 
     {
         const crawledFromJJGirl = await crawlIdolFromJJGirl(name_jjg);
-        data.metadata = {
-            ...data.metadata,
-            jjGirlQueryName: crawledFromJJGirl?.queryName,
-            jjGirlImg: {
-                imageIndex: crawledFromJJGirl?.imageIndex ?? 0,
-                folderIndex: crawledFromJJGirl?.folderIndex ?? 0
+        console.log('[crawledFromJJGirl]', crawledFromJJGirl);
+        if (crawledFromJJGirl) {
+            data.metadata = {
+                ...data.metadata,
+                jjGirlQueryName: crawledFromJJGirl?.queryName,
+                jjGirlImg: {
+                    imageIndex: crawledFromJJGirl?.imageIndex ?? 0,
+                    folderIndex: crawledFromJJGirl?.folderIndex ?? 0
+                }
             }
+            fs.writeFileSync("test/samples/jjgirl.json", JSON.stringify(crawledFromJJGirl));
         }
-        fs.writeFileSync("test/samples/jjgirl.json", JSON.stringify(crawledFromJJGirl));
     }
 
     fs.writeFileSync(`test/samples/data_${name_jdb}.json`, JSON.stringify(data));
