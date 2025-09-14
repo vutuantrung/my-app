@@ -3,48 +3,50 @@ const axios = require('axios');
 const fs = require("fs");
 const path = require("path");
 const { parse } = require('node-html-parser');
-const { sleep } = require("../../helpers");
+const { sleep, generateRandomNumber, inverseName } = require("../../helpers");
 const { CACHED_FOLDER } = require('../../constants');
 
 const BASE_IMAGE_TEMPLATE = 'https://jjgirls.com/japanese/#NAME#/#FOLDER#/#NAME#-#INDEX#.jpg';
 
 async function checkNameExist(name) {
-    const firstImgUrl = BASE_IMAGE_TEMPLATE
-        .replaceAll('#NAME#', name)
-        .replaceAll('#FOLDER#', 1)
-        .replaceAll('#INDEX#', 1);
-    const isUrlValid = await isValidImageURL(firstImgUrl);
-    return isUrlValid;
+    const lowerCaseName = name.toLowerCase();
+    const apiQueryNames = Array.from(new Set([lowerCaseName, inverseName(lowerCaseName)]));
+    for (const queryName of apiQueryNames) {
+        const firstImgUrl = BASE_IMAGE_TEMPLATE
+            .replaceAll('#NAME#', queryName)
+            .replaceAll('#FOLDER#', 1)
+            .replaceAll('#INDEX#', 1);
+        const isUrlValid = await isValidImageURL(firstImgUrl);
+        if (isUrlValid) {
+            return queryName;
+        }
+    }
+    return null;
 }
 
-async function getJJGirlsImageIndex(name) {
-    let currentName = name;
-    let hasJJGirlData = await checkNameExist(currentName);
-    if (!hasJJGirlData) {
-        const reversedName = [...currentName.split("-")].reverse().join("-");
-        hasJJGirlData = await checkNameExist(reversedName);
-        if (!hasJJGirlData) {
-            console.log("💔 JJGirl info not found", currentName);
-            return null;
-        }
-
-        currentName = reversedName;
-    }
-
-    console.log("\n\n")
-    console.log("👌 JJGirl info found", currentName);
+async function crawlIdolFromJJGirl(name) {
+    console.log("\n[JJGIRL]---------------");
 
     let htmlContentRoot = null, folderIndex = -1, imgIndex = -1;
 
-    const htmlFilePath = path.join(CACHED_FOLDER, currentName + "_jjgirl" + ".html");
+    const queryName = name[0] === "_"
+        ? name.slice(1)
+        : await checkNameExist(name);
+    if (!queryName) {
+        console.log("❌ JJGirl info not found", queryName);
+        return null;
+    }
+    console.log("🎉 JJGirl info found", queryName);
+
+    const htmlFilePath = path.join(CACHED_FOLDER, queryName + "_jjgirl" + ".html");
     if (fs.existsSync(htmlFilePath)) {
-        console.log("✔️ File already exists:", htmlFilePath);
+        console.log("📌 File already exists:", htmlFilePath);
         htmlContentRoot = fs.readFileSync(htmlFilePath, "utf-8");
     } else {
-        console.log("🔥 Gonna crawl from jjgirl url idol:", currentName);
-        const fetchRes = await axios.get(`https://jjgirls.com/japanese/${currentName}/1/`);
+        console.log("🔥 Gonna crawl from jjgirl url idol:", queryName);
+        const fetchRes = await axios.get(`https://jjgirls.com/japanese/${queryName}/1/`);
         if (fetchRes.status !== 200) {
-            throw new Error(`Failed to fetch data for model ${currentName}. Status: ${fetchRes.status}`);
+            throw new Error(`Failed to fetch data for model ${queryName}. Status: ${fetchRes.status}`);
         }
 
         htmlContentRoot = fetchRes.data;
@@ -66,7 +68,7 @@ async function getJJGirlsImageIndex(name) {
 
     // Get last image index
     let newImageUrl = BASE_IMAGE_TEMPLATE
-        .replaceAll('#NAME#', currentName)
+        .replaceAll('#NAME#', queryName)
         .replaceAll('#FOLDER#', folderIndex.toString())
         .replaceAll('#INDEX#', "12");
     if (await isValidImageURL(newImageUrl)) {
@@ -74,7 +76,7 @@ async function getJJGirlsImageIndex(name) {
     } else {
         for (let i = 1; i <= 11; i++) {
             let newImageUrl = BASE_IMAGE_TEMPLATE
-                .replaceAll('#NAME#', currentName)
+                .replaceAll('#NAME#', queryName)
                 .replaceAll('#FOLDER#', folderIndex.toString())
                 .replaceAll('#INDEX#', i.toString());
             isImage = await isValidImageURL(newImageUrl);
@@ -89,13 +91,7 @@ async function getJJGirlsImageIndex(name) {
 
     console.log(`✅ Page crawled succcessfully!`);
 
-    return { name: currentName, folderIndex: parseInt(folderIndex), imageIndex: imgIndex }
-}
-
-function getTotalImages(data) {
-    const [name, folderIndex, imagesIndex] = data.split("|");
-    const total = ((parseInt(folderIndex) - 1) * 12) + parseInt(imagesIndex);
-    return total;
+    return { queryName: queryName, folderIndex: parseInt(folderIndex), imageIndex: imgIndex }
 }
 
 async function isValidImageURL(url) {
@@ -117,21 +113,10 @@ async function isValidImageURL(url) {
     }
 }
 
-function generateRandomUrls(data) {
-    const [name, fIdx, iIdx] = data.split("|");
-    const urls = [];
-    for (let i = 1; i <= 2; i++) {
-        const randFolderIdx = generateRandomNumber(1, parseInt(fIdx));
-        for (let j = 1; j <= 8; j++) {
-            urls.push(BASE_IMAGE_TEMPLATE.replaceAll("#NAME#", name).replace("#FOLDER#", randFolderIdx).replace("#INDEX#", j));
-        }
-    }
-    return urls;
-}
-
-function generateRandomNumber(min, max) {
-    // min and max included
-    return Math.floor(Math.random() * (max - min + 1) + min);
+module.exports = {
+    checkNameExist,
+    crawlIdolFromJJGirl,
+    isValidImageURL
 };
 
-module.exports = { generateRandomUrls, getTotalImages, checkNameExist, getJJGirlsImageIndex, isValidImageURL };
+// crawlIdolFromJJGirl("iori-kawaii").then(res => { console.log('[res]', res); }).catch(err => { console.log('[err]', err); })

@@ -3,9 +3,6 @@ const path = require("path");
 const fs = require("fs");
 const crypto = require('crypto');
 const { default: parse } = require('node-html-parser');
-const { default: render } = require('dom-serializer');
-const { CLIENT_RENEG_LIMIT } = require('tls');
-const { getTotalImages, generateRandomUrls } = require('./features/jjgirls/jjgirls.utils');
 
 function secondsToHms(d) {
     d = Number(d);
@@ -63,7 +60,7 @@ async function downloadImageByUrl(url, destFolder, fileName = "", axiosClient = 
         fileName = fileName ? fileName : getFileNameFromUrl(url);
         const destPath = path.join(destFolder, fileName);
         if (fs.existsSync(destPath)) {
-            console.log(`⚠️  ${fileName} downloaded.`);
+            console.log(`📌 ${fileName} downloaded.`);
             return true;
         }
 
@@ -103,6 +100,59 @@ async function downloadImageByUrl(url, destFolder, fileName = "", axiosClient = 
         console.error('❌ Download failed:', err.message);
         return false;
     }
+}
+
+function inverseName(name) {
+    const nameSegs = name.split("-");
+    if (nameSegs.length === 1) {
+        return name;
+    }
+    return nameSegs.reverse().join("-");
+}
+
+async function fetchWithRetry(url, headers, proxyService, retryTimes) {
+    let fetchedData = null;
+    for (let i = 0; i < retryTimes; i++) {
+        try {
+            if (i > 0) console.log("Retry", i + 1, "time(s).");
+            const client = proxyService.axiosForNextProxy({
+                headers: headers
+            });
+
+            const res = await client.get(url);
+            // console.log("Proxy used:", client._proxy.url, url);
+            if (res.status !== 200) {
+                throw new Error(`Failed to fetch data. Status: ${response.status}`);
+            }
+            fetchedData = res.data;
+            break;
+        } catch (error) {
+            console.log(error.message);
+        }
+    }
+
+    return fetchedData;
+}
+
+async function downloadWithRetry(url, destFolder, fileName, proxyService, retryTimes) {
+    for (let i = 1; i <= retryTimes; i++) {
+        const client = proxyService.axiosForNextProxy({
+            responseType: "stream",
+            timeout: 10000,
+            headers: {
+                'Accept': 'application/json',
+                'Authorization': 'HAHA_ADAM_HAVE_TO_RESORT_TO_THIS#@!@#',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36',
+                'Cookie': 'user-country=USN'
+            }
+        });
+        const downloadSuccess = await downloadImageByUrl(url, destFolder, fileName, client);
+        if (downloadSuccess) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 function getFileNameFromUrl(imageUrl) {
@@ -156,12 +206,18 @@ function updateHTMLTemplate(idolData, moviesData) {
     const idolMetadata = JSON.parse(idolData.metadata);
 
     // avatar
+    let currAvatarPath = "";
+    let imageGifPath = `./database/idol-avatars/${idolData.name}-avatar-gif.gif`;
     let imagePath = `./database/idol-avatars/${idolData.name}-avatar.jpg`;
-    if (!fs.existsSync(imagePath)) {
-        imagePath = `./database/idol-avatars/anonymous.png`;
+    if (fs.existsSync(imageGifPath)) {
+        currAvatarPath = imageGifPath;
+    } else if (fs.existsSync(imagePath)) {
+        currAvatarPath = imagePath;
+    } else {
+        currAvatarPath = './database/idol-avatars/anonymous.png';
     }
-    const abs = path.resolve(imagePath);
-    const b64 = fs.readFileSync(imagePath, "base64");
+    const abs = path.resolve(currAvatarPath);
+    const b64 = fs.readFileSync(currAvatarPath, "base64");
     const mime = toMime(path.extname(abs));
     const dataUri = `data:${mime};base64,${b64}`;
     html.querySelector("img[class='avatar-img']").setAttribute("src", dataUri);
@@ -242,15 +298,20 @@ function updateHTMLTemplate(idolData, moviesData) {
         html.querySelector("div[class='tags']").innerHTML += eleTemplate;
     }
 
-    const jjgirlData = idolMetadata?.jjgirlData;
+    const jjgirlData = idolMetadata?.jjGirlImg;
     if (jjgirlData) {
+        const { imageIndex, folderIndex } = jjgirlData;
+        const total = ((parseInt(folderIndex) - 1) * 12) + parseInt(imageIndex);
+
         const eleTemplate = `
             <span id="tag-note" class="tag tag-icon">
                 <img style="height: 25px; margin-right: 5px;" src="https://jjgirls.com/favicon.ico" />
-                <div id="tag-note-val">${getTotalImages(jjgirlData)}</div>
+                <div id="tag-note-val">${total}</div>
             </span>`;
         html.querySelector("div[class='tags']").innerHTML += eleTemplate;
     }
+
+
 
     // links
     const javdatabaseLink = `
@@ -261,6 +322,7 @@ function updateHTMLTemplate(idolData, moviesData) {
             </a>
         </nav>`;
     html.querySelector("div[class='links-section']").innerHTML += javdatabaseLink;
+
     if (jjgirlData) {
         const jjgirlsLink = `
             <nav class="links" aria-label="Links">
@@ -275,6 +337,12 @@ function updateHTMLTemplate(idolData, moviesData) {
         html.querySelector("p[class='source-links']").innerHTML += jjgilrsLinkIcon;
     }
 
+    const javherName = idolMetadata?.javherQueryName;
+    if (javherName) {
+        const javherNameLinkIcon = `<img style="height: 25px; margin-right: 5px;" src="https://javher.com/favicon.ico" />`;
+        html.querySelector("p[class='source-links']").innerHTML += javherNameLinkIcon;
+    }
+
     // movie thumbs / jjgirl images
     let movieDisplayCount = 1;
     const shuffledMoviesData = shuffleArray(moviesData);
@@ -286,7 +354,15 @@ function updateHTMLTemplate(idolData, moviesData) {
             movieDisplayCount++;
         }
     } else if (jjgirlData) {
-        const imgUrls = generateRandomUrls(jjgirlData)
+        const BASE_IMAGE_TEMPLATE = 'https://jjgirls.com/japanese/#NAME#/#FOLDER#/#NAME#-#INDEX#.jpg';
+        const [name, fIdx, iIdx] = jjgirlData.split("|");
+        const imgUrls = [];
+        for (let i = 1; i <= 2; i++) {
+            const randFolderIdx = generateRandomNumber(1, parseInt(fIdx));
+            for (let j = 1; j <= 8; j++) {
+                urls.push(BASE_IMAGE_TEMPLATE.replaceAll("#NAME#", name).replace("#FOLDER#", randFolderIdx).replace("#INDEX#", j));
+            }
+        }
         for (const imgUrl of imgUrls) {
             const imgHtmlString = `<img class="movie-thumbs" src="${imgUrl}" />`
             html.querySelector("div[class='gallery']").innerHTML += imgHtmlString;
@@ -326,6 +402,8 @@ module.exports = {
     createPropertiesValues,
     createRecordArrayByPropertyName,
     downloadImageByUrl,
+    downloadWithRetry,
+    fetchWithRetry,
     treatIdolName,
     treatMovieCode,
     toMime,
@@ -333,5 +411,6 @@ module.exports = {
     updateHTMLTemplate,
     render404Page,
     shuffleArray,
-    generateHashedFromString
+    generateHashedFromString,
+    inverseName
 }

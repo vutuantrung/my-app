@@ -7,8 +7,8 @@ const idolDbServices = require("../services/idol.service.database");
 const movieDbServices = require("../services/movie.service.database");
 const idolMovieDbServices = require("../services/idolMovie.services.database");
 const idolCrawlingServices = require("../services/idol.service.crawl");
-const { treatIdolName, toMime, updateHTMLTemplate, render404Page, shuffleArray } = require("../helpers");
-const { getJJGirlsImageIndex } = require("../features/jjgirls/jjgirls.utils");
+const { treatIdolName, updateHTMLTemplate, render404Page, shuffleArray } = require("../helpers");
+const { crawlIdolFromJJGirl } = require("../features/jjgirls/jjgirls.utils");
 
 // CREATE
 router.post('/', (req, res) => {
@@ -38,14 +38,15 @@ router.delete('/:id', (req, res) => {
 // SEARCH
 router.post('/search', async (req, res) => {
     try {
+        const TESTING = true;// This will return immediately after detect idol data is saved
         const { name, updateRecord, displayType } = req.body;
-        const curName = treatIdolName(name);
-        console.log("\n👩  ", curName);
+        let [name_jdb, name_jher, name_jjg] = name.split(",");
 
-        // Todo: check the inversed name
+        const mainName = treatIdolName(name_jdb).replace("_", "");// REMOVE UNDER_SCORE
+        console.log("\n👩  ", mainName);
 
         // 1. search in db
-        const idolsFound = await idolDbServices.searchIdolsByName(curName);
+        const idolsFound = await idolDbServices.searchIdolsByName(mainName);
         // console.log('[idolsFound]', idolsFound);
 
         // 2. if has => return
@@ -53,8 +54,8 @@ router.post('/search', async (req, res) => {
             throw new Error(err.message);
         }
         // console.log('[idolsFound]', idolsFound);
-        if (idolsFound.data.length > 0 && !updateRecord) {
-            const searchMoviesReq = await idolMovieDbServices.searchMovieByIdolName(curName);
+        if (idolsFound.data.length > 0 && !TESTING) {
+            const searchMoviesReq = await idolMovieDbServices.searchMovieByIdolName(mainName);
             const moviesCode = searchMoviesReq.map(e => e.movie_code);
             const shuffledMoviesCode = shuffleArray(moviesCode).slice(0, 8).filter(Boolean);
             const moviesDataReq = await movieDbServices.searchMoviesByCodes(shuffledMoviesCode);
@@ -66,63 +67,50 @@ router.post('/search', async (req, res) => {
             res.status(200).send(resultSendback);
             return;
         }
+
         // 3. crawl from internet
         // const cachedPath = `../cached/${name}.json`
-        const cachedPath = path.join(process.cwd(), "cached", curName + ".json")
+        const cachedPath = path.join(process.cwd(), "cached", mainName + ".json")
         const exist = fs.existsSync(cachedPath);
 
-        let idolData = null, jjgirlData = null;
-        if (exist) {
+        let idolData = null;
+        if (exist && !updateRecord) {
             const d = fs.readFileSync(cachedPath, "utf-8");
             idolData = JSON.parse(d);
         } else {
-            idolData = await idolCrawlingServices.crawlIdolByName(curName);
-            const indexData = await getJJGirlsImageIndex(curName);
-            jjgirlData = indexData ? `${indexData.name}|${indexData.folderIndex}|${indexData.imageIndex}` : ""
-        }
+            const tmp_name_jher = name_jher
+                ? (name_jher[0] === "_" ? name_jher : treatIdolName(name_jher))
+                : (name_jdb[0] === "_" ? name_jdb : treatIdolName(name_jdb));
+            const tmp_name_jjg = name_jjg
+                ? name_jjg[0] === "_" ? name_jjg : treatIdolName(name_jjg)
+                : (name_jdb[0] === "_" ? name_jdb : treatIdolName(name_jdb));
 
-        if (!idolData && !jjgirlData) {
-            console.log('❌ Idol not found');
-            res.status(200).send(render404Page());
-            return;
+            if (idolsFound.data.length > 0) {
+                const savedRecord = idolsFound.data[0];
+                const metadata = JSON.parse(savedRecord.metadata);
+                name_jdb = "_" + savedRecord.name;
+                name_jher = metadata.javherQueryName ? "_" + metadata.javherQueryName : tmp_name_jher;
+                name_jjg = metadata.jjGirlQueryName ? "_" + metadata.jjGirlQueryName : tmp_name_jjg;
+            } else {
+                name_jdb = name_jdb[0] === "_" ? name_jdb : treatIdolName(name_jdb);
+                name_jher = tmp_name_jher;
+                name_jjg = tmp_name_jjg;
+            }
+
+            idolData = await idolCrawlingServices.crawlIdolByName({ name_jdb, name_jher, name_jjg });
         }
 
         // console.log(idolData);
         // 4. treat data
         // 4.1 idol
-        const idol = {
-            name: curName,
-            dob: idolData?.dob,
-            measurements: idolData?.measurements,
-            height: idolData?.height,
-            country: idolData?.birthplace,
-            cup: idolData?.cup,
-            movies_count: idolData?.movies.length,
-            note: idolData?.note,
-            favorite: idolData?.favorite,
-            my_favorite: 0,
-            jp: idolData?.jp,
-            created_time: Date.now(),
-            updated_time: Date.now(),
-            metadata: JSON.stringify({
-                avatar: idolData?.avatar,
-                age: idolData?.age,
-                debut: idolData?.debut,
-                sign: idolData?.sign,
-                blood: idolData?.blood,
-                shoe_size: idolData?.shoe_size,
-                hair_length: idolData?.['hair_length(s)'],
-                hair_color: idolData?.['hair_color(s)'],
-                tags: idolData?.tags ? idolData.tags.map(tag => tag.name + ":" + tag.value).join("|") : "",
-                jjgirlData: jjgirlData
-            })
-        }
+        const idol = JSON.parse(JSON.stringify(idolData));
+        delete idol.movies;
 
         // 4.3 idol - movie
         const idolMovies = idolData?.movies
             ? idolData.movies.map(movie => ({
                 movie_code: movie.code,
-                idol_name: curName
+                idol_name: mainName
             }))
             : [];
 
@@ -142,7 +130,7 @@ router.post('/search', async (req, res) => {
         // 5. save to db
         // 5.1 save idol
         if (idolsFound.data.length > 0) {
-            const updateIdolResult = await idolDbServices.updateIdolByName(curName, idol);
+            const updateIdolResult = await idolDbServices.updateIdolByName(mainName, idol);
             console.log('[updateIdolResult]', updateIdolResult)
         } else {
             const createIdolResult = await idolDbServices.createIdols([idol]);

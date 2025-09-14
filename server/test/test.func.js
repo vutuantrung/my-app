@@ -38,15 +38,15 @@ const urls = [
     "https://www.javdatabase.com/idols/rara-anzai/"
 ];
 
-const { getJJGirlsImageIndex } = require("../features/jjgirls/jjgirls.utils.js")
+const { crawlIdolFromJJGirl } = require("../features/jjgirls/jjgirls.utils.js")
 
 async function execute() {
-    const res = await getJJGirlsImageIndex("ryo-shinohara");
+    const res = await crawlIdolFromJJGirl("ryo-shinohara");
     console.log(res);
 }
 
 // const client = require('https');
-// const { getJJGirlsImageIndex, isValidImageURL, } = require("./features/jjgirls/jjgirls.utils");
+// const { crawlIdolFromJJGirl, isValidImageURL, } = require("./features/jjgirls/jjgirls.utils");
 // const { downloadImageByUrl } = require("./helpers");
 // function downloadImage(url, filepath) {
 //     return new Promise((resolve, reject) => {

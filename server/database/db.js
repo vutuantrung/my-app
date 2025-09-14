@@ -1,6 +1,12 @@
 const sqlite3 = require('sqlite3').verbose();
 const db = new sqlite3.Database('./database/my-db');
 
+// WAL + sane durability
+db.exec('PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL;');
+
+// Make SQLite wait for a short time instead of failing immediately
+db.configure('busyTimeout', 5000); // 5s
+
 db.serialize(() => {
     db.run(`
     CREATE TABLE IF NOT EXISTS idol_profile (
