@@ -9,7 +9,7 @@ const { parseDocument } = require('htmlparser2');
 const { selectOne } = require('css-select');
 const render = require("dom-serializer").default;
 const { CACHED_FOLDER, MOVIE_THUMBS_FOLDER } = require('../../constants');
-const { downloadImageByUrl, fetchWithRetry } = require('../../helpers');
+const { downloadImageByUrl, fetchWithRetry, checkFullThunmbs } = require('../../helpers');
 const ProxyRotator = require('../../services/proxy.service');
 
 
@@ -131,7 +131,7 @@ async function crawlMovie(movieInfo, recrawl = false) {
     // get data from all page hrefs
     data = { ...data, ...extractDataFromHref(dataNode) };
 
-    // console.log('[data_movie]', data);
+    console.log('[data_movie]', data);
 
     //// FETCH DATA FROM JAVHER
     const apiUrl = `https://javher.com/api/video/watch-${data.content_id}-${(new Date(data.release_date)).getTime()}`,
@@ -163,7 +163,10 @@ async function crawlMovie(movieInfo, recrawl = false) {
 
     const { success: fetchedSuccess, video: fetchedVideo } = jsonData;
     if (fetchedSuccess) {
-        data.images.push(...fetchedVideo.gallery.map(e => e.replace("https://pics.r18.com/", "https://pics.dmm.co.jp/")));
+        data.images.push(...fetchedVideo.gallery.map(url => {
+            const { full } = checkFullThunmbs(url);
+            return full.replace("https://pics.r18.com/", "https://pics.dmm.co.jp/")
+        }));
         // data.images.push(...fetchedVideo.gallery.map(e => {
         //     const [seg1, seg2] = e.split("-");
         //     return `${seg1}jp-${seg2}`;
@@ -184,16 +187,16 @@ async function crawlMovie(movieInfo, recrawl = false) {
     if (data.thumbs.full) {
         await downloadImageByUrl(data.thumbs.full, MOVIE_THUMBS_FOLDER, data.content_id + "-thumbs-full.jpg");
     }
-    // 3. download scence images
+    // 3. download full thumbs
     for (const imageUrl of data.images) {
         const nameSegs = imageUrl.split("/");
         const fileName = nameSegs[nameSegs.length - 1];
         await downloadImageByUrl(imageUrl, MOVIE_THUMBS_FOLDER, fileName);
     }
-    // 4. download scence covers
-    const coverThumbs = fetchedVideo.gallery.map(e => {
-        const [seg1, seg2] = e.replace("https://pics.r18.com/", "https://pics.dmm.co.jp/").split("-");
-        return `${seg1}jp-${seg2}`;
+    // 4. download cover thumbs
+    const coverThumbs = fetchedVideo.gallery.map(url => {
+        const { cover } = checkFullThunmbs(url);
+        return cover.replace("https://pics.r18.com/", "https://pics.dmm.co.jp/");
     })
     for (const imageUrl of coverThumbs) {
         const nameSegs = imageUrl.split("/");
@@ -205,6 +208,7 @@ async function crawlMovie(movieInfo, recrawl = false) {
     fs.writeFileSync(fileJsonPath, JSON.stringify(data));
     return data;
 }
+
 
 module.exports = { crawlMovie }
 

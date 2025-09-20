@@ -203,7 +203,7 @@ function dashToTitleCase(input) {
         .join(' ');
 }
 
-function renderMovieHTMLTemplte(movieData, idolList) {
+function renderMovieHTMLTemplate(movieData, idolList) {
     const htmlTemplateString = fs.readFileSync("./assets/TEMPLATE_MOVIE.html", "utf-8");
     const html = parse(htmlTemplateString);
 
@@ -213,7 +213,7 @@ function renderMovieHTMLTemplte(movieData, idolList) {
     // Poster image
     const posterImgEle = html.getElementById("posterImage");
     if (posterImgEle) {
-        const element = `<img src="${movieData.thumbs}" itemprop="image" loading="eager" decoding="async" />`;
+        const element = `<img src="${movieData.thumbs ?? movieData.thumbs_short}" itemprop="image" loading="eager" decoding="async" style="object-fit: contain;" />`;
         posterImgEle.innerHTML += element;
     }
 
@@ -224,9 +224,13 @@ function renderMovieHTMLTemplte(movieData, idolList) {
     html.getElementById("runTime").innerHTML += `<span class="spanText">${movieData.runtime}</span>`;
 
     const metadata = JSON.parse(movieData.metadata);
+    if (!metadata) {
+        console.log(movieData);
+    }
+
     // Tags
     const tagSection = html.getElementById("tags");
-    const genres = metadata.genres;
+    const genres = metadata?.genres;
     if (genres) {
         const genreVals = genres.split("|");
         for (const genre of genreVals) {
@@ -246,16 +250,15 @@ function renderMovieHTMLTemplte(movieData, idolList) {
 
     // Thumbs
     const thumbnailsSection = html.getElementById("thumbnails");
-    const scenceImages = movieData.images.split("|")
-    for (const imgUrl of scenceImages) {
-        const coverImgUrl = imgUrl;
-        const [seg1, seg2] = imgUrl.split("-");
-        const fullImgUrl = `${seg1}jp-${seg2}`;
-
-        const element = `<a class="thumb" href="${fullImgUrl}" aria-label="Scene 1">
-                            <img src="${coverImgUrl}"alt="Scene 1" loading="lazy" decoding="async">
+    const scenceImages = movieData.images?.split("|")
+    if (Array.isArray(scenceImages)) {
+        for (const imgUrl of scenceImages) {
+            const { cover, full } = checkFullThunmbs(imgUrl);
+            const element = `<a class="thumb" href="${full}" aria-label="Scene 1">
+                            <img src="${cover}"alt="Scene 1" loading="lazy" decoding="async">
                         </a>`;
-        thumbnailsSection.innerHTML += element;
+            thumbnailsSection.innerHTML += element;
+        }
     }
 
     // Code
@@ -418,13 +421,13 @@ function renderIdolHTMLTemplate(idolData, moviesData) {
             movieDisplayCount++;
         }
     } else if (jjgirlData) {
+        console.log('[jjgirlData]', jjgirlData, idolMetadata);
         const BASE_IMAGE_TEMPLATE = 'https://jjgirls.com/japanese/#NAME#/#FOLDER#/#NAME#-#INDEX#.jpg';
-        const [name, fIdx, iIdx] = jjgirlData.split("|");
         const imgUrls = [];
         for (let i = 1; i <= 2; i++) {
-            const randFolderIdx = generateRandomNumber(1, parseInt(fIdx));
+            const randFolderIdx = generateRandomNumber(1, parseInt(jjgirlData.folderIndex));
             for (let j = 1; j <= 8; j++) {
-                urls.push(BASE_IMAGE_TEMPLATE.replaceAll("#NAME#", name).replace("#FOLDER#", randFolderIdx).replace("#INDEX#", j));
+                imgUrls.push(BASE_IMAGE_TEMPLATE.replaceAll("#NAME#", idolMetadata.jjGirlQueryName).replace("#FOLDER#", randFolderIdx).replace("#INDEX#", j));
             }
         }
         for (const imgUrl of imgUrls) {
@@ -458,6 +461,16 @@ function generateHashedFromString(str) {
     return crypto.createHash('md5').update(str).digest('hex');
 }
 
+function checkFullThunmbs(url) {
+    if (!url) throw new Error("Invalid thumb url");
+    const [seg1, seg2] = url.toLowerCase().split("-");
+    const isJP = seg1.slice(-2) === "jp";
+    return {
+        full: isJP ? url : (seg1 + "jp-" + seg2),
+        cover: isJP ? (seg1.substring(0, seg1.length - 2) + "-" + seg2) : url
+    }
+}
+
 module.exports = {
     secondsToHms,
     sleep,
@@ -473,10 +486,11 @@ module.exports = {
     toMime,
     generateRandomNumber,
     renderIdolHTMLTemplate,
-    renderMovieHTMLTemplte,
+    renderMovieHTMLTemplate,
     render404Page,
     shuffleArray,
     generateHashedFromString,
     inverseName,
-    reverseIdolName
+    reverseIdolName,
+    checkFullThunmbs
 }

@@ -373,3 +373,6 @@ function saveBase64VideoAsMp4(base64Data, outputFilePath) {
 //         }
 //     }
 // })();
+
+const [a1, a2] = "".split("|");
+console.log(a1, a2);

@@ -9,7 +9,7 @@ const movieDbServices = require("../services/movie.service.database");
 const movieCrawlingServices = require("../services/movie.service.crawl")
 const idolMovieDbServices = require("../services/idolMovie.services.database");
 const idolCrawlingServices = require("../services/idol.service.crawl");
-const { treatMovieCode, renderMovieHTMLTemplte } = require("../helpers");
+const { treatMovieCode, renderMovieHTMLTemplate } = require("../helpers");
 
 // SEARCH
 router.post('/search', async (req, res) => {
@@ -49,7 +49,7 @@ router.post('/search', async (req, res) => {
 
             let resultSendback = displayType === "json"
                 ? JSON.stringify(moviesFound.data)
-                : renderMovieHTMLTemplte(moviesFound.data[0], idolList);
+                : renderMovieHTMLTemplate(moviesFound.data[0], idolList);
 
             res.status(200).send(resultSendback);
             return;
@@ -120,7 +120,7 @@ router.post('/search', async (req, res) => {
 
         let resultSendback = displayType === "json"
             ? JSON.stringify(moviesFound.data)
-            : renderMovieHTMLTemplte(movie, idols.map(e => e.name));
+            : renderMovieHTMLTemplate(movie, idols.map(e => e.name));
 
         res.status(200).send(resultSendback);
     } catch (error) {

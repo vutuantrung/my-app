@@ -1,13 +1,13 @@
 const proxyIps = `
+142.111.48.253:7030:skjpdwdk:wbf5e31thcpw
 198.23.239.134:6540:skjpdwdk:wbf5e31thcpw
 45.38.107.97:6014:skjpdwdk:wbf5e31thcpw
 107.172.163.27:6543:skjpdwdk:wbf5e31thcpw
 64.137.96.74:6641:skjpdwdk:wbf5e31thcpw
-45.43.186.39:6257:skjpdwdk:wbf5e31thcpw
 154.203.43.247:5536:skjpdwdk:wbf5e31thcpw
 84.247.60.125:6095:skjpdwdk:wbf5e31thcpw
 216.10.27.159:6837:skjpdwdk:wbf5e31thcpw
-136.0.207.84:6661:skjpdwdk:wbf5e31thcpw
+142.111.67.146:5611:skjpdwdk:wbf5e31thcpw
 142.147.128.93:6593:skjpdwdk:wbf5e31thcpw
 `;
 // proxy-rotator.js
