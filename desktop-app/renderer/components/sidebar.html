@@ -1,0 +1,33 @@
+<div class="sidebar-section">
+    <div class="sidebar-title">Navigation</div>
+    <ul class="nav-list">
+        <li><button class="nav-item is-active" data-page="dashboard"><span class="nav-icon">🏠</span><span
+                    class="label">Dashboard</span></button></li>
+        <li class="has-children" id="nav-library">
+            <button class="nav-item" data-toggle="submenu" aria-expanded="false" aria-controls="library-subnav">
+                <span class="nav-icon">📚</span>
+                <span class="label">Library</span>
+                <span class="spacer"></span>
+                <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M8 9l4 4 4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                </svg>
+            </button>
+            <ul id="library-subnav" class="sub-nav hide-sub-nav">
+                <li><button class="sub-item" data-page="library-all"><span class="label">All</span></button></li>
+                <li><button class="sub-item" data-page="library-collections"><span
+                            class="label">Collections</span></button></li>
+            </ul>
+        </li>
+        <li><button class="nav-item" data-page="settings"><span class="nav-icon">⚙️</span><span
+                    class="label">Settings</span></button></li>
+    </ul>
+</div>
+<div class="sidebar-section">
+    <div class="sidebar-title">Shortcuts</div>
+    <ul class="nav-list">
+        <li><button class="nav-item" data-action="new"><span class="nav-icon">➕</span><span
+                    class="label">New</span></button></li>
+        <li><button class="nav-item" data-action="import"><span class="nav-icon">📥</span><span
+                    class="label">Import</span></button></li>
+    </ul>
+</div>

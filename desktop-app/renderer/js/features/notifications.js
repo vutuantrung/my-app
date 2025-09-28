@@ -1,0 +1,4 @@
+import { $ } from "../utils/dom.js"; import { kv } from "../utils/store.js";
+const NOTIF_KEY="notif-count";
+function setBadge(n){ const badge=$("#notifBadge"); if(!badge) return; const v=Math.max(0, n|0); badge.textContent= v>99?"99+":String(v); badge.setAttribute("aria-label", `${v} unread`); badge.style.display = v>0 ? "inline-grid" : "none"; }
+export function initNotifications({ setStatus }){ const btn=$("#notifBtn"); setBadge(kv.get(NOTIF_KEY,0)||0); btn?.addEventListener("click",()=>{ const curr=kv.get(NOTIF_KEY,0)||0; const next=curr>0?0:3; kv.set(NOTIF_KEY,next); setBadge(next); setStatus?.(next?"3 new notifications":"Notifications cleared", 1000); }); }

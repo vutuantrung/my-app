@@ -5,37 +5,29 @@ const { createPropertiesCREATEColumns, createPropertiesValues, createRecordArray
 const properties = ["idol_name", "movie_code"];
 
 // GET all or search by codes (comma-separated)
-async function searchMovieByCode(code = '') {
-    if (!code) {
-        return;
-    }
-
-    const terms = code ? code.split(',').map(n => n.trim()).filter(Boolean) : [];
-    let query = 'SELECT * FROM movie';
-    let params = [];
-
-    if (terms.length > 0) {
-        const orClause = terms.map(() => 'movie_code LIKE ?').join(' OR ');
-        query += ` WHERE ${orClause}`;
-        params = terms.map(term => `%${term}%`);
-    }
-
-    return db.all(query, params, (err, rows) => {
-        if (err) {
-            console.log(err.message);
-            return null;
-        }
-        return rows;
+async function getAll() {
+    const sql = "SELECT idol_name, movie_code FROM idol_movie";
+    return new Promise((resolve, reject) => {
+        db.all(sql, [],
+            (err, rows) => {
+                if (err) {
+                    console.log('[getAll]', `Search failed: ${err.message}`);
+                    reject(err);
+                } else {
+                    resolve(rows || null);
+                }
+            });
     });
 }
 
 async function searchMovieByIdolName(idolName) {
+    const sql = "SELECT * FROM idol_movie WHERE idol_name = ?";
     return new Promise((resolve, reject) => {
-        db.all(`SELECT * FROM idol_movie WHERE idol_name = ?`,
-            [idolName],
+        db.all(sql, [idolName],
             (err, row) => {
                 if (err) {
-                    reject(`Database error: ${err.message}`);
+                    console.log('[searchMovieByIdolName]', `Search failed: ${err.message}`);
+                    reject(err);
                 } else {
                     resolve(row || null);
                 }
@@ -44,12 +36,13 @@ async function searchMovieByIdolName(idolName) {
 }
 
 async function searchIdolsByMovieCode(movieCode) {
+    const sql = "SELECT * FROM idol_movie WHERE movie_code = ?";
     return new Promise((resolve, reject) => {
-        db.all(`SELECT * FROM idol_movie WHERE movie_code = ?`,
-            [movieCode],
+        db.all(sql, [movieCode],
             (err, row) => {
                 if (err) {
-                    reject(`Database error: ${err.message}`);
+                    console.log('[searchIdolsByMovieCode]', `Search failed: ${err.message}`);
+                    reject(err);
                 } else {
                     resolve(row || null);
                 }
@@ -59,21 +52,52 @@ async function searchIdolsByMovieCode(movieCode) {
 
 // CREATE
 async function createIdolMovies(idolMovies) {
+    if (Array.isArray(idolMovies) && idolMovies.length === 0) return "Empty";
+
+    const sql = `INSERT OR IGNORE INTO idol_movie ${createPropertiesCREATEColumns(properties)}
+                VALUES ${createPropertiesValues(properties)}`
     return new Promise((resolve, reject) => {
         db.serialize(() => {
             db.run(`BEGIN TRANSACTION`);
-            const stmt = db.prepare(`
-            INSERT OR IGNORE INTO idol_movie ${createPropertiesCREATEColumns(properties)}
-            VALUES ${createPropertiesValues(properties)}`);
+            const stmt = db.prepare(sql);
             for (const idolMovie of idolMovies) {
                 stmt.run(createRecordArrayByPropertyName(properties, idolMovie), err => {
-                    if (err) reject(`Insert failed: ${err.message}`);
+                    if (err) {
+                        console.log('[createIdolMovies]', `Create failed: ${err.message}`);
+                        reject(err);
+                    }
                 });
             }
             stmt.finalize();
-            db.run(`COMMIT`, (err) => { if (err) reject(err); resolve(true) });
+            db.run(`COMMIT`, (err) => {
+                if (err) {
+                    console.log('[createIdolMovies]', `Create failed: ${err.message}`);
+                    reject(err);
+                }
+                console.log('[createIdolMovies]', `Create successfully: ${idolMovies.length} idol-movie(s).`)
+                resolve(true);
+            });
         });
     })
 }
 
-module.exports = { createIdolMovies, searchIdolsByMovieCode, searchMovieByIdolName }
+module.exports = { getAll, createIdolMovies, searchIdolsByMovieCode, searchMovieByIdolName }
+
+// getAll().then(rows => {
+//     const map = new Map();
+
+//     for (const r of rows) {
+//         if (!r.idol_name) continue;
+//         if (!map.has(r.idol_name)) map.set(r.idol_name, new Set());
+//         if (r.movie_code) map.get(r.idol_name).add(r.movie_code);
+//     }
+
+//     const result = [...map.entries()]
+//         .map(([idol, codes]) => ({
+//             idolName: idol,
+//             movieCodes: [...codes].sort((a, b) => a.localeCompare(b)),
+//         }))
+//         .sort((a, b) => a.idolName.localeCompare(b.idolName));
+
+//     console.log(result);
+// });

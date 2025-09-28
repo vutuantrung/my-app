@@ -121,12 +121,13 @@ async function fetchWithRetry(url, headers, proxyService, retryTimes) {
 
             const res = await client.get(url);
             // console.log("Proxy used:", client._proxy.url, url);
-            if (res.status !== 200) {
-                throw new Error(`Failed to fetch data. Status: ${response.status}`);
-            }
             fetchedData = res.data;
             break;
         } catch (error) {
+            if (error.message.includes("code 404")) {
+                console.log("Page 404!");
+                break;
+            }
             console.log(error.message);
         }
     }
@@ -253,8 +254,9 @@ function renderMovieHTMLTemplate(movieData, idolList) {
     const scenceImages = movieData.images?.split("|")
     if (Array.isArray(scenceImages)) {
         for (const imgUrl of scenceImages) {
-            const { cover, full } = checkFullThunmbs(imgUrl);
-            const element = `<a class="thumb" href="${full}" aria-label="Scene 1">
+            const { cover, full } = classifyThumbsType(imgUrl);
+            const element = `
+                        <a class="thumb" href="${full}" aria-label="Scene 1">
                             <img src="${cover}"alt="Scene 1" loading="lazy" decoding="async">
                         </a>`;
             thumbnailsSection.innerHTML += element;
@@ -305,7 +307,7 @@ function renderIdolHTMLTemplate(idolData, moviesData) {
     }
 
     const moviesCount = idolData.movies_count;
-    console.log('[moviesCount]', moviesCount);
+    // console.log('[moviesCount]', moviesCount);
     if (moviesCount) {
         const ele = `<div class="bio-info"><span class="label">Movies count</span><span class="value">${moviesCount}</span></div>`;
         biosElement.innerHTML += ele;
@@ -461,13 +463,36 @@ function generateHashedFromString(str) {
     return crypto.createHash('md5').update(str).digest('hex');
 }
 
-function checkFullThunmbs(url) {
+function classifyThumbsType(url) {
     if (!url) throw new Error("Invalid thumb url");
-    const [seg1, seg2] = url.toLowerCase().split("-");
-    const isJP = seg1.slice(-2) === "jp";
+    const imageSegs = url.toLowerCase().split("/");
+    const imgName = imageSegs.pop();
+    const [seg1, seg2] = imgName.split("-");
+    const isFull = seg1.slice(-2) === "jp";
+    const preImgName = isFull ? seg1.substring(0, seg1.length - 2) : seg1;
+    const names = {
+        full: preImgName + "jp-" + seg2,
+        cover: preImgName + "-" + seg2
+    }
     return {
-        full: isJP ? url : (seg1 + "jp-" + seg2),
-        cover: isJP ? (seg1.substring(0, seg1.length - 2) + "-" + seg2) : url
+        full: [...imageSegs, names.full].join("/"),
+        cover: [...imageSegs, names.cover].join("/"),
+    }
+}
+
+function classifyPosterType(url) {
+    if (!url) throw new Error("Invalid poster url");
+    const imageSegs = url.toLowerCase().split("/");
+    const imgName = imageSegs.pop();
+    const [seg1, seg2] = imgName.split(".");
+    const preImgName = seg1.substring(0, seg1.length - 2);
+    const names = {
+        full: preImgName + "pl." + seg2,
+        cover: preImgName + "ps." + seg2
+    }
+    return {
+        full: [...imageSegs, names.full].join("/"),
+        cover: [...imageSegs, names.cover].join("/"),
     }
 }
 
@@ -492,5 +517,6 @@ module.exports = {
     generateHashedFromString,
     inverseName,
     reverseIdolName,
-    checkFullThunmbs
+    classifyThumbsType,
+    classifyPosterType
 }

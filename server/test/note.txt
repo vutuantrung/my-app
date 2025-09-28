@@ -1,0 +1,1 @@
+it works! Now we're focusing only the Electron app. Design for me a page which can display a model information. The data includes: Name, Avatar, Cover photos (about 5 images and scroll horizontally automatically), Date of birth, Date of debut, Movies count, Measurements, Tags, Movies posters images. The page is responsive

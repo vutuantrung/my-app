@@ -1,0 +1,2 @@
+const ls = window.localStorage;
+export const kv = { get(key, fallback=null){ try{return JSON.parse(ls.getItem(key))}catch{return fallback} }, set(key,val){ ls.setItem(key, JSON.stringify(val)) }, getBool(key, fallback=false){ const v = kv.get(key, null); return typeof v === "boolean" ? v : fallback; } };

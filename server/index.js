@@ -20,9 +20,13 @@ const express = require('express');
 const cors = require('cors');
 const app = express();
 const PORT = 3001;
+const bodyParser = require('body-parser');
 
 app.use(cors());
-app.use(express.json());
+// app.use(express.json());
+
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 
 // Serve static files from a 'public' directory
 app.use('/images', express.static(path.join(process.cwd(), 'database')));

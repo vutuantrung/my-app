@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>D3 Force Graph — Vanilla</title>
+    <link rel="stylesheet" href="preview.css">
+</head>
+
+<body>
+    <div id="app">
+        <header>
+            <h1>D3 Force Graph — Vanilla</h1>
+            <div class="controls">
+                <input id="searchInput" class="input" type="text" placeholder="Search term..." />
+                <button id="searchBtn" class="btn" title="Call API with query">Search</button>
+                <button id="fit" class="btn" title="Fit to screen">Fit</button>
+                <button id="reset" class="btn" title="Reset zoom">Reset</button>
+                <button id="shuffle" class="btn" title="Reheat simulation">Reheat</button>
+                <input id="imgFile" class="btn" type="file" accept="image/*" title="Upload image for selected node" />
+                <span id="selInfo" style="font-size:12px;opacity:.8">No node selected</span>
+            </div>
+        </header>
+        <div class="canvas" id="canvas">
+            <svg id="graph" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid meet" role="img"
+                aria-label="Graph visualization">
+                <defs>
+                    <marker id="arrow" viewBox="0 -5 10 10" refX="16" refY="0" markerWidth="6" markerHeight="6"
+                        orient="auto">
+                        <path d="M0,-5L10,0L0,5" fill="currentColor"></path>
+                    </marker>
+                </defs>
+            </svg>
+            <div class="tooltip" id="tooltip"></div>
+            <div class="legend">Wheel to zoom • Drag nodes • Shift+Drag to pan</div>
+            <div id="apiOut" class="api-result" aria-live="polite">API: idle</div>
+        </div>
+    </div>
+
+    <!-- D3 v7 -->
+    <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+    <script src="preview.js"></script>
+</body>
+
+</html>

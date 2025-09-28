@@ -5,6 +5,8 @@ import { Body } from './Body';
 
 import LiveStream from './LiveStream/LiveStream';
 import Explore from './Explore/Explore';
+import IdolDashboard from './IdolDashboard/IdolDashboard';
+
 import SavedCourses from './SavedCourses/SavedCourses';
 import Settings from './Settings/Settings';
 import Help from './Help/Help';
@@ -93,6 +95,7 @@ const Main = () => {
                     <Route path="cardSamples" Component={CardSamples} />
 
                     <Route path="explore" Component={Explore} />
+                    <Route path="idolDashboard" Component={IdolDashboard} />
                     <Route path="savedCourses" Component={SavedCourses} />
                     <Route path="settings" Component={Settings} />
                     <Route path="help" Component={Help} />

@@ -28,6 +28,12 @@ const AppLeftsideBar = () => {
                                 <span>Explore</span>
                             </NavLink>
                         </li>
+                        <li className="menu--item">
+                            <NavLink to="/idolDashboard" className="menu--link menu--label" title="Explore">
+                                <i className="uil uil-search menu--icon"></i>
+                                <span>Idol Dashboard</span>
+                            </NavLink>
+                        </li>
                         <li className="menu--item menu--item__has_sub_menu">
                             <label className="menu--link" title="Categories">
                                 <i className="uil uil-layers menu--icon"></i>

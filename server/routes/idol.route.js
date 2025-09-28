@@ -39,6 +39,7 @@ router.delete('/:id', (req, res) => {
 router.post('/search', async (req, res) => {
     try {
         const TESTING = true;// This will return immediately after detect idol data is saved
+        console.log('[req.body]', req.body);
         const { name, updateRecord, displayType } = req.body;
         let [name_jdb, name_jher, name_jjg] = name.split(",");
 
@@ -60,8 +61,13 @@ router.post('/search', async (req, res) => {
             const shuffledMoviesCode = shuffleArray(moviesCode).slice(0, 8).filter(Boolean);
             const moviesDataReq = await movieDbServices.searchMoviesByCodes(shuffledMoviesCode);
             // console.log(moviesDataReq);
+            const jsonDataReturn = {
+                ...idolsFound.data[0],
+                movies: moviesCode
+            }
+            // console.log(jsonDataReturn);
             let resultSendback = displayType === "json"
-                ? JSON.stringify(idolsFound.data[0])
+                ? JSON.stringify(jsonDataReturn)
                 : renderIdolHTMLTemplate(idolsFound.data[0], moviesDataReq.data);
 
             res.status(200).send(resultSendback);
@@ -70,8 +76,7 @@ router.post('/search', async (req, res) => {
 
         // 3. crawl from internet
         // const cachedPath = `../cached/${name}.json`
-        const cachedPath = path.join(process.cwd(), "cached", mainName + ".json")
-        const exist = fs.existsSync(cachedPath);
+        const cachedPath = path.join(process.cwd(), "cached", mainName + ".json");
 
         let idolData = null;
         if (idolsFound.data.length > 0 && !updateRecord) {
@@ -100,7 +105,7 @@ router.post('/search', async (req, res) => {
             idolData = await idolCrawlingServices.crawlIdolByName({ name_jdb, name_jher, name_jjg });
         }
 
-        // console.log(idolData);
+        // console.log('[idolData]', idolData);
         // 4. treat data
         // 4.1 idol
         const idol = JSON.parse(JSON.stringify(idolData));
@@ -130,26 +135,22 @@ router.post('/search', async (req, res) => {
         // 5. save to db
         // 5.1 save idol
         if (idolsFound.data.length > 0) {
-            const updateIdolResult = await idolDbServices.updateIdolByName(mainName, idol);
-            console.log('[updateIdolResult]', updateIdolResult)
+            await idolDbServices.updateIdolByName(mainName, idol);
         } else {
-            const createIdolResult = await idolDbServices.createIdols([idol]);
-            console.log('[createIdolResult]', createIdolResult)
+            await idolDbServices.createIdols([idol]);
         }
 
         // 5.2 save movie(s)
         if (movies.length === 0) console.log('No movies to save.');
         else {
-            const createMoviesResult = await movieDbServices.createMovies(movies);
-            console.log('[createMoviesResult]', createMoviesResult);
+            await movieDbServices.createMovies(movies);
         }
 
         // 5.3 save idol - movie (s)
         // console.log('[idol]', idol);
         if (idolMovies.length === 0) console.log('No idol movies to save.');
         else {
-            const createIdolMovies = await idolMovieDbServices.createIdolMovies(idolMovies);
-            console.log('[createIdolMovies]', createIdolMovies);
+            await idolMovieDbServices.createIdolMovies(idolMovies);
         }
 
         let resultSendback = displayType === "json"

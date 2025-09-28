@@ -18,12 +18,14 @@ async function checkNameJAVDbExist(name, proxyService) {
     ));
 
     for (const queryName of apiQueryNames) {
-        const url = `https://www.javdatabase.com/idols/${name}`;
+        const url = `https://www.javdatabase.com/idols/${queryName}`;
         const htmlContentRoot = await fetchWithRetry(url, {}, proxyService, RETRY_TIMES);
-        const root = parse(htmlContentRoot);
-        const page404 = root.querySelector("div[class='page-404']");
-        if (!page404) {
-            return queryName;
+        if (htmlContentRoot) {
+            const root = parse(htmlContentRoot);
+            const page404 = root.querySelector("div[class='page-404']");
+            if (!page404) {
+                return queryName;
+            }
         }
     }
     return null;
@@ -43,7 +45,7 @@ async function crawlIdolJAVDatabase(name, recrawl = false) {
     const RETRY_TIMES = 3;
     const data = {};
     let htmlContentRoot = null;
-    const proxyService = new ProxyRotator("random");
+    const proxyService = new ProxyRotator("round-robin");
     console.log('[JAVDATABASE]', name);
     const queryName = name[0] === "_"
         ? name.slice(1)
@@ -179,8 +181,8 @@ async function checkNameJAVHerExist(name, proxyService) {
     const RETRY_TIMES = 3;
     const lowerCaseName = name.toLowerCase();
     const apiQueryNames = Array.from(new Set([
-        lowerCaseName + "-1",
         lowerCaseName,
+        lowerCaseName + "-1",
         inverseName(lowerCaseName),
         inverseName(lowerCaseName) + "-1"]
     ));
@@ -195,9 +197,11 @@ async function checkNameJAVHerExist(name, proxyService) {
         }
         const jsonData = await fetchWithRetry(url, headers, proxyService, RETRY_TIMES);
         // console.log('[jsonData]', jsonData);
-        const { success } = jsonData;
+        const { success, count } = jsonData;
         if (success) {
-            return queryName;
+            console.log("🎉 JAVHer info found", queryName);
+            console.log("👀 Number of movie will be collected:", jsonData.count);
+            return { queryName: queryName, count: jsonData.count };
         }
     }
     return null;
@@ -209,19 +213,22 @@ async function checkNameJAVHerExist(name, proxyService) {
 async function crawlIdolFromJAVHer(name, recrawl = false) {
     console.log("\n[JAVHer]---------------");
 
+    let timeWait = 2000;
+
     const RETRY_TIMES = 3;
     const data = {};
     const proxyService = new ProxyRotator("random");
 
     // 1. Detect query name
-    const queryName = name[0] === "_"
-        ? name.slice(1)
+    const checkResult = name[0] === "_"
+        ? { queryName: name.slice(1), count: 0 }
         : await checkNameJAVHerExist(name, proxyService);
+    const { queryName, count } = checkResult;
+    if (count < 200) timeWait = 100;
     if (!queryName) {
         console.log("❌ JAVHer info not found", queryName);
         return null;
     }
-    console.log("🎉 JAVHer info found", queryName);
 
     // 2. Collect movies
     let pageCount = 0,
@@ -268,7 +275,7 @@ async function crawlIdolFromJAVHer(name, recrawl = false) {
             }
 
             if (Array.isArray(fetchedVideos) && fetchedVideos.length === 0) {
-                console.log("Videos final page reached! Number of videos:", jsonData.count);
+                console.log("Videos final page reached! Number of videos collected:", jsonData.count);
                 break;
             }
 
@@ -310,7 +317,7 @@ async function crawlIdolFromJAVHer(name, recrawl = false) {
         } finally {
             pageCount++;
             if (!fileExisted) {
-                await sleep(2000);// Prevent rushing request call
+                await sleep(timeWait);// Prevent rushing request call
             }
         }
     }

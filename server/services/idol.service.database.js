@@ -63,8 +63,8 @@ async function searchIdolByFavorite(favorite) {
         db.all(sqlCommand, [favorite],
             (err, rows) => {
                 if (err) {
-                    console.log('[searchIdolByFavorite]', `Search failed: ${err.message}`)
-                    resolve({ data: null });
+                    console.log('[searchIdolByFavorite]', `Search failed: ${err.message}`);
+                    resolve({ data: null })
                 };
                 resolve({ data: rows });
             });
@@ -73,6 +73,7 @@ async function searchIdolByFavorite(favorite) {
 
 // CREATE
 async function createIdols(idols) {
+    if (Array.isArray(idols) && idols.length === 0) return "Empty";
     const sqlCommand = `INSERT OR IGNORE INTO idol_profile ${createPropertiesCREATEColumns(columns)}
                         VALUES ${createPropertiesValues(columns)}`;
     return new Promise((resolve, reject) => {
@@ -82,13 +83,20 @@ async function createIdols(idols) {
             for (const idol of idols) {
                 stmt.run(createRecordArrayByPropertyName(columns, idol), err => {
                     if (err) {
-                        console.log('[createIdols]', `Create failed: ${err.message}`)
-                        reject(`Create failed: ${err.message}`)
+                        console.log('[createIdols]', `Create failed: ${err.message}`);
+                        reject(err);
                     };
                 });
             }
             stmt.finalize();
-            db.run(`COMMIT`, (err) => { if (err) reject(err); resolve(true) });
+            db.run(`COMMIT`, (err) => {
+                if (err) {
+                    console.log('[createIdols]', `Create failed: ${err.message}`);
+                    reject(err);
+                }
+                console.log('[createIdols]', `Create successfully: ${idols.length} idol(s).`);
+                resolve(true)
+            });
         });
     })
 }
@@ -104,7 +112,8 @@ async function updateIdolById(id, idolUpdateData) {
                     console.log('[updateIdolById]', `Update failed: ${err.message}`);
                     resolve(false);
                 }
-                resolve(true);
+                console.log('[updateIdolById]', `Update successfully: ${id}`);
+                resolve(id);
             }
         );
     })
@@ -118,7 +127,8 @@ async function updateIdolByName(name, idolUpdateData) {
             if (err) {
                 console.log('[updateIdolByName]', `Update failed: ${err.messages}`);
                 resolve(false);
-            }          // <-- don't swallow errors
+            }
+            console.log('[updateIdolByName]', `Update successfully: ${name}`);
             return resolve(this.changes > 0);       // true only if a row was changed
         });
     });
@@ -134,7 +144,8 @@ async function deleteIdolById(id) {
                     console.log('[deleteIdolById]', `Delete failed: ${err.messages}`);
                     resolve(false);
                 }
-                resolve(true);
+                console.log('[deleteIdolById]', `Delete successfully: ${id}`);
+                resolve(id);
             });
     });
 }

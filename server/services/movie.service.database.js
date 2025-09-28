@@ -67,7 +67,7 @@ async function searchMovieByCode(code) {
     return new Promise((resolve, reject) => {
         db.all(query, params, (err, rows) => {
             if (err) {
-                console.log('[searchMoviesByCode]', `Search failed: ${err.message}`)
+                console.log('[searchMoviesByCode]', `Search failed: ${err.message}`);
                 resolve({ err: err.message });
             }
             // console.log(rows)
@@ -77,9 +77,13 @@ async function searchMovieByCode(code) {
 }
 
 async function searchMovieByFavorite(favorite) {
+    const sql = "SELECT * FROM movie WHERE favorite = ?";
     return new Promise((resolve, reject) => {
-        db.all(`SELECT * FROM movie WHERE favorite = ?`, [favorite], (err, rows) => {
-            if (err) return reject(err);
+        db.all(sql, [favorite], (err, rows) => {
+            if (err) {
+                console.log('[searchMovieByFavorite]', `Search failed: ${err.message}`);
+                return reject(err);
+            }
             resolve({ data: rows });
         });
     });
@@ -87,9 +91,13 @@ async function searchMovieByFavorite(favorite) {
 
 /** my_favorite = 1 */
 async function searchMovieByMyFavorite() {
+    const sql = "SELECT * FROM movie WHERE my_favorite = 1";
     return new Promise((resolve, reject) => {
-        db.all(`SELECT * FROM movie WHERE my_favorite = 1`, [], (err, rows) => {
-            if (err) return reject(err);
+        db.all(sql, [], (err, rows) => {
+            if (err) {
+                console.log('[searchMovieByMyFavorite]', `Search failed: ${err.message}`);
+                return reject(err);
+            }
             resolve({ data: rows });
         });
     });
@@ -97,9 +105,13 @@ async function searchMovieByMyFavorite() {
 
 /** note LIKE %keyword% (case-insensitive). */
 async function searchMovieByNote(keyword) {
+    const sql = "SELECT * FROM movie WHERE note LIKE ? COLLATE NOCASE";
     return new Promise((resolve, reject) => {
-        db.all(`SELECT * FROM movie WHERE note LIKE ? COLLATE NOCASE`, [`%${keyword}%`], (err, rows) => {
-            if (err) return reject(err);
+        db.all(sql, [`%${keyword}%`], (err, rows) => {
+            if (err) {
+                console.log('[searchMovieByNote]', `Search failed: ${err.message}`);
+                return reject(err);
+            }
             resolve({ data: rows });
         });
     });
@@ -112,52 +124,63 @@ async function searchMovieById(id) {
 
 // CREATE
 async function createMovies(movies) {
+    if (Array.isArray(movies) && movies.length === 0) return "Empty";
+
+    const sql = `INSERT OR IGNORE INTO movie ${createPropertiesCREATEColumns(columns)}
+                VALUES ${createPropertiesValues(columns)}`;
     return new Promise((resolve, reject) => {
         db.serialize(() => {
             db.run(`BEGIN TRANSACTION`);
-            const stmt = db.prepare(`
-            INSERT OR IGNORE INTO movie ${createPropertiesCREATEColumns(columns)}
-            VALUES ${createPropertiesValues(columns)}`);
+            const stmt = db.prepare(sql);
             for (const movie of movies) {
                 stmt.run(createRecordArrayByPropertyName(columns, movie), err => {
                     if (err) {
-                        console.log('[createMovies]', `Create failed: ${err.message}`)
-                        reject(`Create failed: ${err.message}`);
+                        console.log('[createMovies]', `Create failed: ${err.message}`);
+                        reject(err);
                     };
                 });
             }
             stmt.finalize();
-            db.run(`COMMIT`, (err) => { if (err) reject(err); resolve(true) });
+            db.run(`COMMIT`, (err) => {
+                if (err) {
+                    console.log('[createMovies]', `Create failed: ${err.message}`);
+                    reject(err)
+                }
+                console.log('[createMovies]', `Create successfully: ${movies.length} movie(s).`);
+                resolve(true)
+            });
         });
     })
 }
 
 // UPDATE
 async function updateMovieById(id, updateData /* Map */) {
+    const sql = `UPDATE movie SET ${setString} WHERE id = ?`;
     const { setString, valuesArr } = createPropertiesUPDATEColumns(updateData);
     return new Promise((resolve, reject) => {
-        db.run(`UPDATE movie SET ${setString} WHERE id = ?`, [...valuesArr, id], function (err) {
+        db.run(sql, [...valuesArr, id], function (err) {
             if (err) {
                 console.log('[updateMovieById]', `Update failed: ${err.message}`);
-                resolve(false);
+                resolve(null);
             }
-            resolve(true);
+            console.log('[updateMovieById]', `Update successfully: ${id}`);
+            resolve(id);
         });
     });
 }
 
 async function updateMovieByCode(code, updateData /* Map */) {
     const { setString, valuesArr } = createPropertiesUPDATEColumns(updateData);
+    const sql = `UPDATE movie SET ${setString} WHERE code = ?`;
     return new Promise((resolve, reject) => {
-        db.run(
-            `UPDATE movie SET ${setString} WHERE code = ?`,
-            [...valuesArr, code],
+        db.run(sql, [...valuesArr, code],
             function (err) {
                 if (err) {
                     console.log('[updateMovieByCode]', `Update failed: ${err.message}`)
-                    resolve(false);
+                    resolve(null);
                 }
-                resolve(true);
+                console.log('[updateMovieByCode]', `Update successfully: ${code}`)
+                resolve(code);
             }
         );
     });
@@ -165,14 +188,16 @@ async function updateMovieByCode(code, updateData /* Map */) {
 
 // DELETE
 async function deleteMovieById(id) {
+    const sql = "DELETE FROM movie WHERE id = ?";
     return new Promise((resolve, reject) => {
-        db.run(`DELETE FROM movie WHERE id = ?`, [id],
+        db.run(sql, [id],
             function (err) {
                 if (err) {
                     console.log('[deleteMovieById]', `Delete failed: ${err.messages}`);
-                    resolve(false);
+                    resolve(null);
                 }
-                resolve(true);
+                console.log('[deleteMovieById]', `Delete successfully: ${id}`);
+                resolve(id);
             });
     });
 }

@@ -1,0 +1,2 @@
+import { $ } from "../utils/dom.js";
+export function initStatusbar(){ const statusText=$("#statusText"); const yearEl=$("#year"); if(yearEl) yearEl.textContent=new Date().getFullYear(); const refreshBtn=$("#refreshBtn"); refreshBtn?.addEventListener("click",()=>{ if(!statusText) return; statusText.textContent="Refreshed at "+new Date().toLocaleTimeString(); setTimeout(()=>statusText.textContent="Ready",1200); }); return { setStatus(txt,ms=1000){ if(!statusText) return; statusText.textContent=txt; if(ms>0) setTimeout(()=>statusText.textContent="Ready",ms); } }; }

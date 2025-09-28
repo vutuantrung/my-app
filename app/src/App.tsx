@@ -15,6 +15,7 @@ import Help from './pages/main/Help/Help';
 import Settings from './pages/main/Settings/Settings';
 
 import Explore from './pages/main/Explore/Explore';
+import IdolDashboard from './pages/main/IdolDashboard/IdolDashboard';
 import SavedCourses from './pages/main/SavedCourses/SavedCourses';
 import ReportHistory from './pages/main/ReportHistory/ReportHistory';
 import Feedback from './pages/main/Feedback/Feedback';
@@ -120,6 +121,7 @@ const App = () => {
                     <Route path="" element={<Body />} />
 
                     <Route path="explore" element={<Explore />} />
+                    <Route path="idolDashboard" element={<IdolDashboard />} />
                     <Route path="cardSamples" element={<CardSamples />} />
                     <Route path="savedCourses" element={<SavedCourses />} />
                     <Route path="settings" element={<Settings />} />

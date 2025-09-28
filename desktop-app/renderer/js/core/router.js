@@ -1,0 +1,5 @@
+import { $, $$ } from "../utils/dom.js"; import { bus } from "./bus.js";
+function clearActive(){ $$(".nav-item").forEach(b=>b.classList.remove("is-active")); $$(".sub-item").forEach(b=>b.classList.remove("is-active")); }
+function showPage(id){ $$(".page").forEach(p=>p.classList.remove("visible")); const section=$("#page-"+id); if(section) section.classList.add("visible"); }
+export function setActivePage(id){ if(!id) return; showPage(id); clearActive(); const subBtn = document.querySelector(`.sub-item[data-page="${id}"]`); if(subBtn){ subBtn.classList.add("is-active"); document.querySelector("#nav-library > .nav-item")?.classList.add("is-active"); } else { const topBtn=document.querySelector(`.nav-item[data-page="${id}"]`); topBtn?.classList.add("is-active"); } bus.emit("route:change",{page:id}); }
+export function initRouter(){ if(!document.querySelector(".page.visible")) setActivePage("dashboard"); }

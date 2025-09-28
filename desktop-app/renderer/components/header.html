@@ -1,0 +1,45 @@
+<div class="left-head">
+  <button id="sidebarToggle" class="icon-btn" aria-label="Toggle sidebar" title="Toggle sidebar">
+    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M3 6h18M3 12h18M3 18h18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </svg>
+  </button>
+  <div class="brand">
+    <span class="brand-mark">⚡</span>
+    <span class="brand-name">My App</span>
+  </div>
+</div>
+<div class="header-search" role="search">
+  <form id="searchForm" autocomplete="off">
+    <input id="searchInput" type="search" placeholder="Search…" aria-label="Search" />
+    <button class="icon-btn" id="searchBtn" aria-label="Run search" title="Search">
+      <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="m21 21-4.3-4.3M10 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+    </button>
+  </form>
+</div>
+<nav class="header-actions">
+  <button class="btn" id="refreshBtn" aria-label="Refresh">Refresh</button>
+  <div class="notif">
+    <button id="notifBtn" class="icon-btn notif-btn" aria-label="Notifications" title="Notifications">
+      <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M6 8a6 6 0 1 1 12 0v5l1.5 3H4.5L6 13V8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        <path d="M10 19a2 2 0 0 0 4 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      <span id="notifBadge" class="badge" aria-label="0 unread">0</span>
+    </button>
+  </div>
+  <div class="user-menu">
+    <button id="avatarBtn" class="avatar-btn" aria-haspopup="menu" aria-expanded="false" aria-controls="userMenu" title="Open user menu">
+      <img alt="User avatar" src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0nNjQnIGhlaWdodD0nNjQnIHZpZXdCb3g9JzAgMCA2NCA2NCcgeG1sbnM9J2h0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnJz48Y2lyY2xlIGN4PSczMicgY3k9JzMyJyByPSczMCcgZmlsbD0nI2JiY2InLz48Y2lyY2xlIGN4PSczMicgY3k9JzI0JyByPScxMCcgZmlsbD0nI2ZmZicvPjxwYXRoIGQ9J00xMiA1MGMwLTExIDEwLTE2IDIwLTE2czIwIDUgMjAgMTZ2NGgtNDB6JyBmaWxsPScjZmZmJyBvcGFjaXR5PScuNScvPjwvc3ZnPg==" />
+    </button>
+    <div id="userMenu" class="menu" role="menu" aria-labelledby="avatarBtn">
+      <button class="menu-item" role="menuitem" data-action="account">My account</button>
+      <button class="menu-item" role="menuitem" data-action="settings">Settings</button>
+      <button class="menu-item" role="menuitem" data-action="help">Help</button>
+      <hr class="menu-sep" />
+      <button class="menu-item" role="menuitem" id="themeToggle">Switch to Light theme</button>
+    </div>
+  </div>
+</nav>
