@@ -14,7 +14,7 @@ async function crawlIdolByName({ name_jdb, name_jher, name_jjg }) {
     {
         const crawledFromJAVDb = await crawlIdolJAVDatabase(name_jdb);
         data = {
-            name: crawledFromJAVDb?.queryName ?? name_jdb,
+            name: crawledFromJAVDb?.queryName ?? name_jdb.replace("_", ""),
             dob: crawledFromJAVDb?.dob,
             measurements: crawledFromJAVDb?.measurements,
             height: crawledFromJAVDb?.height,
@@ -46,21 +46,27 @@ async function crawlIdolByName({ name_jdb, name_jher, name_jjg }) {
 
     {
         const crawledFromJAVHer = await crawlIdolFromJAVHer(name_jher);
-        data = {
-            ...data,
-            movies_count: crawledFromJAVHer?.movies?.length ?? 0,
-            movies: crawledFromJAVHer?.movies ?? [],
-            metadata: {
-                ...data.metadata,
-                javherQueryName: crawledFromJAVHer?.queryName
+        if (crawledFromJAVHer) {
+            data = {
+                ...data,
+                movies_count: crawledFromJAVHer?.movies?.length ?? 0,
+                movies: crawledFromJAVHer?.movies ?? [],
+                metadata: {
+                    ...data.metadata,
+                    javherQueryName: crawledFromJAVHer?.queryName
+                }
             }
+            const showupData = JSON.parse(JSON.stringify(crawledFromJAVHer));
+            delete showupData.movies;
+            console.log('[JAVHER]', '[fetchedData]', showupData);
+
+            fs.writeFileSync("test/samples/javher.json", JSON.stringify(crawledFromJAVHer));
         }
-        fs.writeFileSync("test/samples/javher.json", JSON.stringify(crawledFromJAVHer));
     }
 
     {
         const crawledFromJJGirl = await crawlIdolFromJJGirl(name_jjg);
-        console.log('[crawledFromJJGirl]', crawledFromJJGirl);
+        // console.log('[crawledFromJJGirl]', crawledFromJJGirl);
         if (crawledFromJJGirl) {
             data.metadata = {
                 ...data.metadata,
@@ -74,6 +80,10 @@ async function crawlIdolByName({ name_jdb, name_jher, name_jjg }) {
         }
     }
 
+    const showupData = JSON.parse(JSON.stringify(data));
+    delete showupData.movies;
+    console.log('[data]', showupData);
+
     fs.writeFileSync(`test/samples/data_${name_jdb}.json`, JSON.stringify(data));
 
     data.metadata = JSON.stringify(data.metadata);
@@ -86,5 +96,4 @@ async function crawlIdolByName({ name_jdb, name_jher, name_jjg }) {
 //     name_jher: "anri-okita",
 //     name_jjg: "anri-okita",
 // })
-
 module.exports = { crawlIdolByName, setAvatar }

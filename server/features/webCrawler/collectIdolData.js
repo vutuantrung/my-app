@@ -223,12 +223,13 @@ async function crawlIdolFromJAVHer(name, recrawl = false) {
     const checkResult = name[0] === "_"
         ? { queryName: name.slice(1), count: 0 }
         : await checkNameJAVHerExist(name, proxyService);
-    const { queryName, count } = checkResult;
-    if (count < 200) timeWait = 100;
-    if (!queryName) {
-        console.log("❌ JAVHer info not found", queryName);
+    if (!checkResult) {
+        console.log("❌ JAVHer info not found", name);
         return null;
     }
+
+    const { queryName, count } = checkResult;
+    if (count < 200) timeWait = 100;
 
     // 2. Collect movies
     let pageCount = 0,

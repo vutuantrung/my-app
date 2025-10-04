@@ -4,12 +4,11 @@ const path = require('path');
 const fs = require('fs');
 const { parse } = require('node-html-parser');
 const { extractText, extractDataFromHref } = require('./webCrawler.utils');
-const { default: axios } = require('axios');
 const { parseDocument } = require('htmlparser2');
 const { selectOne } = require('css-select');
 const render = require("dom-serializer").default;
 const { CACHED_FOLDER, MOVIE_THUMBS_FOLDER } = require('../../constants');
-const { downloadImageByUrl, fetchWithRetry, classifyThumbsType, classifyPosterType } = require('../../helpers');
+const { downloadImageByUrl, fetchWithRetry, classifyThumbsType, classifyPosterType, downloadMovieByUrl } = require('../../helpers');
 const ProxyRotator = require('../../services/proxy.service');
 
 
@@ -113,20 +112,31 @@ async function crawlMovie(movieInfo, recrawl = false) {
                 data.note = note;
             }
 
-            // 3. Movie thumbs
-            if (!data.thumbs) {
-                data.thumbs = {
-                    cover: `https://pics.dmm.co.jp/digital/video/${data.content_id}/${data.content_id}ps.jpg`,
-                    full: `https://pics.dmm.co.jp/digital/video/${data.content_id}/${data.content_id}pl.jpg`
-                };
-            }
-            // 3.1 Video thumbs for uncensored video
-            const videoThumbContainer = root?.querySelector("video");
-            if (videoThumbContainer) {
-                const src = videoThumbContainer.getAttribute("poster");
-                if (!data.thumbs.cover) data.thumbs.cover = src;
-                if (!data.thumbs.full) data.thumbs.full = src;
-            }
+            // // 3. Movie thumbs
+            // if (!data.thumbs) {
+            //     console.log('[url]', url);
+            //     if (url.startsWith("https://pics.r18.com/") || url.startsWith("https://pics.dmm.co.jp/")) {
+            //         data.thumbs = {
+            //             cover: `https://pics.dmm.co.jp/digital/video/${data.content_id}/${data.content_id}ps.jpg`,
+            //             full: `https://pics.dmm.co.jp/digital/video/${data.content_id}/${data.content_id}pl.jpg`
+            //         };
+            //     }
+            //     // https://image.mgstage.com/images/prestige/abf/189/pf_e_abf-189.jpg
+            //     if (url.startsWith("https://image.mgstage.com/")) {
+            //         data.thumbs = {
+            //             // cover: url.replace("/pb_", "/pf_"),
+            //             cover: url.replace("/pb_e_", "/pf_o1_"),
+            //             full: url
+            //         };
+            //     }
+            // }
+            // // 3.1 Video thumbs for uncensored video
+            // const videoThumbContainer = root?.querySelector("video");
+            // if (videoThumbContainer) {
+            //     const src = videoThumbContainer.getAttribute("poster");
+            //     if (!data.thumbs.cover) data.thumbs.cover = src;
+            //     if (!data.thumbs.full) data.thumbs.full = src;
+            // }
 
             // get data from all page hrefs
             data = { ...data, ...extractDataFromHref(dataNode) };
@@ -168,14 +178,12 @@ async function crawlMovie(movieInfo, recrawl = false) {
             'Cookie': 'user-country=USN'
         }
         jsonData = await fetchWithRetry(apiUrl, headers, proxyService, RETRY_TIMES);
-        console.log('[jsonData]', jsonData);
+        console.log('[JAVHER]', '[fetchedData]', jsonData);
     }
 
-    console.log('[jsonData]', jsonData);
     if (!jsonData) {
         console.log("Fetch data failed after retry", RETRY_TIMES, "times");
     }
-    console.log('[jsonData]', jsonData);
 
     const { success: fetchedSuccess, video: fetchedVideo } = jsonData;
     if (fetchedSuccess) {
@@ -191,18 +199,18 @@ async function crawlMovie(movieInfo, recrawl = false) {
         data.release_date = fetchedVideo.releaseDate.split("T")[0];
         data.runtime = fetchedVideo.duration + " min.";
         data.studio = {
-            raw: fetchedVideo.studio.slug,
-            name: fetchedVideo.studio.name,
+            raw: fetchedVideo.studio?.slug,
+            name: fetchedVideo.studio?.name,
         }
         data.director = fetchedVideo.director;
         data.favorite = "0";
         data.note = "";
-        data.thumbs = classifyPosterType(fetchedVideo.image)
+        data.thumbs = classifyPosterType(fetchedVideo.image);
 
         if (!data.images) data.images = [];
         data.images.push(...fetchedVideo.gallery.map(url => {
             const { full } = classifyThumbsType(url);
-            return full.replace("https://pics.r18.com/", "https://pics.dmm.co.jp/")
+            return full;
         }));
         data.genres = fetchedVideo.categories.map(cat => ({
             raw: cat.slug,
@@ -215,33 +223,65 @@ async function crawlMovie(movieInfo, recrawl = false) {
         data.images = Array.from(new Set(data.images));// remove dups
     }
 
-    // console.log(data);
-
     //// DOWNLOAD MEDIAS
     // 1. download cover
-    if (data.thumbs.cover) {
-        await downloadImageByUrl(data.thumbs.cover, MOVIE_THUMBS_FOLDER, data.content_id + "-thumbs-cover.jpg");
+    if (Array.isArray(data.thumbs.cover) && data.thumbs.cover.length > 0) {
+        //https://image.mgstage.com/images/prestige/abf/189/pf_o1_abf-189.jpg
+        for (const url of data.thumbs.cover) {
+            const succ = await downloadImageByUrl(url, MOVIE_THUMBS_FOLDER, data.content_id + "-thumbs-cover.jpg");
+            if (succ) break;
+        }
     }
     // 2. download poster
     if (data.thumbs.full) {
+        //https://image.mgstage.com/images/prestige/abf/189/pb_e_abf-189.jpg
         await downloadImageByUrl(data.thumbs.full, MOVIE_THUMBS_FOLDER, data.content_id + "-thumbs-full.jpg");
     }
     // 3. download full thumbs
-    for (const imageUrl of data.images) {
-        const nameSegs = imageUrl.split("/");
-        const fileName = nameSegs[nameSegs.length - 1];
+    for (const [idx, imageUrl] of data.images.entries()) {
+        const ext = imageUrl.split(".").pop();
+        const fileName = `${data.content_id}jp-${idx}.${ext}`;
         await downloadImageByUrl(imageUrl, MOVIE_THUMBS_FOLDER, fileName);
     }
     // 4. download cover thumbs
     const coverThumbs = fetchedVideo.gallery.map(url => {
         const { cover } = classifyThumbsType(url);
-        return cover.replace("https://pics.r18.com/", "https://pics.dmm.co.jp/");
+        return cover;
     })
-    for (const imageUrl of coverThumbs) {
-        const nameSegs = imageUrl.split("/");
-        const fileName = nameSegs[nameSegs.length - 1];
-        await downloadImageByUrl(imageUrl, MOVIE_THUMBS_FOLDER, fileName);
+    for (const [idx, imgsCover] of coverThumbs.entries()) {
+        for (const imgCover of imgsCover) {
+            const ext = imgCover.split(".").pop();
+            const fileName = `${data.content_id}-${idx}.${ext}`;
+            const succ = await downloadImageByUrl(imgCover, MOVIE_THUMBS_FOLDER, fileName);
+            if (succ) continue;
+        }
     }
+    // 5. download preview video
+    let preVideoDownloadSuccess = false;
+    const uncensoredVideoUrl = 'https://fourhoi.com/#DVD_ID#-uncensored-leak/preview.mp4';
+    const normalVideoUrl = 'https://fourhoi.com/#DVD_ID#/preview.mp4';
+    const engDubVideoUrl = 'https://fourhoi.com/#DVD_ID#-english-subtitle/preview.mp4';
+
+    const hostTemplates = [uncensoredVideoUrl, normalVideoUrl, engDubVideoUrl]
+    let fileName = "";
+    for (const host of hostTemplates) {
+        const url = host.replace("#DVD_ID#", data.dvd_id.toLowerCase());
+        try {
+            fileName = data.content_id + "-preview.mp4";
+            await downloadMovieByUrl(url, MOVIE_THUMBS_FOLDER, fileName, 20_000);
+            preVideoDownloadSuccess = true;
+            break;
+        } catch (err) {
+            console.log("❌ Download preview error:", err?.message || String(err));
+            console.log("Try next host:", url);
+        }
+    }
+    if (preVideoDownloadSuccess) {
+        console.log("✅🎬 Downloaded", fileName);
+    } else {
+        console.log("❌ Download failed or video not found:", fileName);
+    }
+
     console.log('[fullData]', data);
     const fileJsonPath = path.join(CACHED_FOLDER, data.dvd_id + ".json");
     fs.writeFileSync(fileJsonPath, JSON.stringify(data));

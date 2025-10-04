@@ -87,7 +87,7 @@ router.post('/search', async (req, res) => {
                 ? (name_jher[0] === "_" ? name_jher : parseIdolName(name_jher))
                 : (name_jdb[0] === "_" ? name_jdb : parseIdolName(name_jdb));
             const tmp_name_jjg = name_jjg
-                ? name_jjg[0] === "_" ? name_jjg : parseIdolName(name_jjg)
+                ? (name_jjg[0] === "_" ? name_jjg : parseIdolName(name_jjg))
                 : (name_jdb[0] === "_" ? name_jdb : parseIdolName(name_jdb));
 
             if (idolsFound.data.length > 0) {
@@ -101,6 +101,7 @@ router.post('/search', async (req, res) => {
                 name_jher = tmp_name_jher;
                 name_jjg = tmp_name_jjg;
             }
+            // console.log("name", { name_jdb, name_jher, name_jjg });
 
             idolData = await idolCrawlingServices.crawlIdolByName({ name_jdb, name_jher, name_jjg });
         }

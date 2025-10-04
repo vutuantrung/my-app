@@ -3,6 +3,8 @@ const path = require("path");
 const fs = require("fs");
 const crypto = require('crypto');
 const { default: parse } = require('node-html-parser');
+const { promisify } = require('util');
+const { pipeline } = require('stream');
 
 function secondsToHms(d) {
     d = Number(d);
@@ -73,33 +75,112 @@ async function downloadImageByUrl(url, destFolder, fileName = "", axiosClient = 
         // Ensure directory exists
         fs.mkdirSync(path.dirname(destFolder), { recursive: true });
 
-        const response = axiosClient
-            ? await axiosClient.get(url)
-            : await axios.get(url, {
-                responseType: 'stream',
-                timeout: 10000,
-                headers,
-            })
+        let success = false, response = null;
+        for (let i = 0; i < 3; i++) {
+            try {
+                response = axiosClient
+                    ? await axiosClient.get(url)
+                    : await axios.get(url, {
+                        responseType: 'stream',
+                        timeout: 10000,
+                        headers,
+                    })
+
+                const isNowPrintingImage = response.request.res.responseUrl.split("/").pop() === "now_printing.jpg";
+                if (isNowPrintingImage) {
+                    break;
+                }
+
+                // const response = await axios.get(url, {
+                //     responseType: 'stream',
+                //     timeout: 10000,
+                //     headers,
+                // });
+                const writer = fs.createWriteStream(destPath);
+                response.data.pipe(writer);
+                await new Promise((resolve, reject) => {
+                    writer.on('finish', resolve);
+                    writer.on('error', reject);
+                });
+                success = true;
+
+                break;
+            } catch (error) {
+                success = false;
+                // console.log("❌ Download failed: ", fileName, ".\n==Error: " + error.message + ".\n==Retry ", i + 1, "time(s).");
+            }
+        }
 
         // const response = await axios.get(url, {
         //     responseType: 'stream',
         //     timeout: 10000,
         //     headers,
         // });
-        const writer = fs.createWriteStream(destPath);
-        response.data.pipe(writer);
-        await new Promise((resolve, reject) => {
-            writer.on('finish', resolve);
-            writer.on('error', reject);
-        });
-
-        console.log(`✅ Downloaded to ${destPath}`);
+        if (!success) {
+            throw new Error();
+        }
+        console.log(`✅🎞️ Downloaded ${fileName}`);
 
         return true;
     } catch (err) {
-        console.error('❌ Download failed:', err.message);
+        console.error('❌ Download failed:', url);
         return false;
     }
+}
+
+const streamPipeline = promisify(pipeline);
+
+async function downloadMovieByUrl(url, destFolder, fileName, timeoutMs) {
+    if (fs.existsSync(path.join(destFolder, fileName))) {
+        console.log("📌", fileName, "downloaded.");
+        return;
+    }
+    // Timeout via AbortController
+    const controller = new AbortController();
+    const t = setTimeout(() => controller.abort(new Error("Fetch timeout")), timeoutMs);
+
+    let res;
+    try {
+        res = await fetch(url, {
+            method: "GET",
+            signal: controller.signal,
+            headers: {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+                "Accept": "video/mp4, */*;q=0.8",
+                "Accept-Encoding": "identity;q=1, *;q=0", // no gzip
+                "sec-ch-ua": '"Chromium";v="140", "Not=A?Brand";v="24", "Google Chrome";v="140"',
+                "sec-ch-ua-mobile": "?0",
+                "sec-ch-ua-platform": '"Windows"',
+                "sec-fetch-dest": "video",
+            }
+        });
+    } finally {
+        clearTimeout(t);
+    }
+
+    if (!res.ok) {
+        throw new Error(`HTTP ${res.status} ${res.statusText} for ${url}`);
+    }
+
+    const ctype = res.headers.get("content-type") || "";
+    const clen = Number(res.headers.get("content-length") || 0);
+
+    // Strong opinion: reject obviously wrong responses early.
+    if (!/video\/mp4|application\/octet-stream/i.test(ctype)) {
+        throw new Error(`Unexpected content-type "${ctype}" for ${url}`);
+    }
+    if (Number.isFinite(clen) && clen <= 0) {
+        throw new Error(`Empty content-length for ${url}`);
+    }
+    if (!res.body) {
+        throw new Error(`No response body for ${url}`);
+    }
+
+    const destPath = path.join(destFolder, fileName);
+    const fileStream = fs.createWriteStream(destPath, { flags: "w" });
+    await streamPipeline(res.body, fileStream);
+
+    // return { bytes: Number.isFinite(clen) ? clen : undefined };
 }
 
 function inverseName(name) {
@@ -251,13 +332,14 @@ function renderMovieHTMLTemplate(movieData, idolList) {
 
     // Thumbs
     const thumbnailsSection = html.getElementById("thumbnails");
-    const scenceImages = movieData.images?.split("|")
+    const scenceImages = movieData.images?.split("|");
     if (Array.isArray(scenceImages)) {
         for (const imgUrl of scenceImages) {
-            const { cover, full } = classifyThumbsType(imgUrl);
+            if (!imgUrl) continue;
+            const { full } = classifyThumbsType(imgUrl);
             const element = `
                         <a class="thumb" href="${full}" aria-label="Scene 1">
-                            <img src="${cover}"alt="Scene 1" loading="lazy" decoding="async">
+                            <img src="${full}"alt="Scene 1" loading="lazy" decoding="async">
                         </a>`;
             thumbnailsSection.innerHTML += element;
         }
@@ -464,35 +546,97 @@ function generateHashedFromString(str) {
 }
 
 function classifyThumbsType(url) {
-    if (!url) throw new Error("Invalid thumb url");
-    const imageSegs = url.toLowerCase().split("/");
-    const imgName = imageSegs.pop();
-    const [seg1, seg2] = imgName.split("-");
-    const isFull = seg1.slice(-2) === "jp";
-    const preImgName = isFull ? seg1.substring(0, seg1.length - 2) : seg1;
-    const names = {
-        full: preImgName + "jp-" + seg2,
-        cover: preImgName + "-" + seg2
+    if (url.startsWith("https://pics.r18.com/") || url.startsWith("https://pics.dmm.co.jp/")) {
+        if (!url) throw new Error("Invalid thumb url");
+        const imageSegs = url.toLowerCase().split("/");
+        const imgName = imageSegs.pop();
+        const [seg1, seg2] = imgName.split("-");
+
+        const names = {};
+        const isImgTypeSpeficied = ["jp", "js"].includes(seg1.slice(-2));
+        const preImgName = isImgTypeSpeficied ? seg1.substring(0, seg1.length - 2) : seg1;
+        names.full = preImgName + "jp-" + seg2;
+        names.cover = [preImgName + "-" + seg2, preImgName + "js-" + seg2];
+
+        return {
+            full: [...imageSegs, names.full].join("/").replace("https://pics.r18.com/", "https://pics.dmm.co.jp/"),
+            cover: names.cover.map(c => [...imageSegs, c].join("/").replace("https://pics.r18.com/", "https://pics.dmm.co.jp/")),
+        }
+
+
+        // const isFullSpecified = seg1.slice(-2) === "jp";
+        // const isSmallSpecified = seg1.slice(-2) === "js";
+
+        // const names = {};
+        // if (isFullSpecified) {
+        //     const preImgName = seg1.substring(0, seg1.length - 2);
+        //     names.full = preImgName + "jp-" + seg2;
+        //     names.cover = preImgName + "-" + seg2;
+        // } else if (isSmallSpecified) {
+        //     const preImgName = seg1.substring(0, seg1.length - 2);
+        //     names.full = preImgName + "jp-" + seg2;
+        //     names.cover = preImgName + "js-" + seg2;
+        // } else {
+        //     const preImgName = seg1;
+        //     names.full = preImgName + "jp-" + seg2;
+        //     names.cover = preImgName + "-" + seg2;
+        // }
+        // return {
+        //     full: [...imageSegs, names.full].join("/").replace("https://pics.r18.com/", "https://pics.dmm.co.jp/"),
+        //     cover: [...imageSegs, names.cover].join("/").replace("https://pics.r18.com/", "https://pics.dmm.co.jp/"),
+        // }
     }
-    return {
-        full: [...imageSegs, names.full].join("/"),
-        cover: [...imageSegs, names.cover].join("/"),
+
+    if (url.startsWith("https://image.mgstage.com/")) {
+        return {
+            full: url.replace("_t1_", "_e_"),
+            cover: [url],
+        }
     }
 }
 
 function classifyPosterType(url) {
-    if (!url) throw new Error("Invalid poster url");
-    const imageSegs = url.toLowerCase().split("/");
-    const imgName = imageSegs.pop();
-    const [seg1, seg2] = imgName.split(".");
-    const preImgName = seg1.substring(0, seg1.length - 2);
-    const names = {
-        full: preImgName + "pl." + seg2,
-        cover: preImgName + "ps." + seg2
+    if (url.startsWith("https://pics.r18.com/") || url.startsWith("https://pics.dmm.co.jp/")) {
+        if (!url) throw new Error("Invalid poster url");
+        const imageSegs = url.toLowerCase().split("/");
+        const imgName = imageSegs.pop();
+        const [seg1, seg2] = imgName.split(".");
+
+        const names = {};
+        const isImgTypeSpeficied = ["jp", "js"].includes(seg1.slice(-2));
+        if (isImgTypeSpeficied) {
+            const preImgName = isImgTypeSpeficied ? seg1.substring(0, seg1.length - 2) : seg1;
+            names.full = preImgName + "jp." + seg2;
+            names.cover = [preImgName + "." + seg2, preImgName + "js." + seg2];
+        } else {
+            const preImgName = seg1.substring(0, seg1.length - 2);
+            names.full = preImgName + "pl." + seg2;
+            names.cover = [preImgName + "ps." + seg2];
+        }
+
+        // const isFullSpecified = seg1.slice(-2) === "jp";
+        // const names = {};
+        // if (isFullSpecified) {
+        //     const preImgName = seg1.substring(0, seg1.length - 2);
+        //     names.full = preImgName + "jp." + seg2;
+        //     names.cover = preImgName + "." + seg2;
+        // } else {
+        //     const preImgName = seg1.substring(0, seg1.length - 2);
+        //     names.full = preImgName + "jp." + seg2;
+        //     names.cover = preImgName + "js." + seg2;
+        // }
+
+        return {
+            full: [...imageSegs, names.full].join("/"),
+            cover: names.cover.map(c => [...imageSegs, c].join("/")),
+        }
     }
-    return {
-        full: [...imageSegs, names.full].join("/"),
-        cover: [...imageSegs, names.cover].join("/"),
+
+    if (url.startsWith("https://image.mgstage.com/")) {
+        return {
+            full: url.replace("_t1_", "_e_"),
+            cover: [url],
+        }
     }
 }
 
@@ -505,6 +649,7 @@ module.exports = {
     createRecordArrayByPropertyName,
     downloadImageByUrl,
     downloadWithRetry,
+    downloadMovieByUrl,
     fetchWithRetry,
     parseIdolName,
     treatMovieCode,
