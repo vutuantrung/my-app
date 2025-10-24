@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <title>Person Card</title>
+        <link rel="stylesheet" href="./test4.css" />
+    </head>
+    <body>
+        <article class="person-card" aria-label="Person profile">
+            <!-- Cover slider -->
+            <div class="cover" id="cover" aria-label="Cover photo slider">
+                <div class="cover-scroll" id="coverTrack" tabindex="0" role="region" aria-roledescription="carousel" aria-label="Cover photos"></div>
+                <button class="nav-btn nav-prev" id="btnPrev" aria-label="Previous slide"></button>
+                <button class="nav-btn nav-next" id="btnNext" aria-label="Next slide"></button>
+                <div class="dots" id="coverDots" role="tablist" aria-label="Slide indicators"></div>
+            </div>
+
+            <!-- Body -->
+            <section class="profile">
+                <div class="avatar" id="avatar" aria-label="Avatar"></div>
+
+                <div class="header">
+                    <h1 class="name" id="name"></h1>
+                    <div class="jp" id="jpName"></div>
+                </div>
+
+                <div class="meta" role="list">
+                    <div class="field" role="listitem">
+                        <span class="label">Nationality</span>
+                        <span class="value" id="nationality"></span>
+                    </div>
+                    <div class="field" role="listitem">
+                        <span class="label">Date of Birth</span>
+                        <span class="value" id="dob"></span>
+                    </div>
+                    <div class="field" role="listitem">
+                        <span class="label">Debut</span>
+                        <span class="value" id="debut"></span>
+                    </div>
+
+                    <div class="field" role="listitem">
+                        <span class="label">Bust</span>
+                        <span class="value" id="bust"></span>
+                    </div>
+                    <div class="field" role="listitem">
+                        <span class="label">Waist</span>
+                        <span class="value" id="waist"></span>
+                    </div>
+                    <div class="field" role="listitem">
+                        <span class="label">Hips</span>
+                        <span class="value" id="hips"></span>
+                    </div>
+
+                    <div class="field" role="listitem">
+                        <span class="label">Cup size</span>
+                        <span class="value" id="cup"></span>
+                    </div>
+                    <div class="field" role="listitem">
+                        <span class="label">Height</span>
+                        <span class="value" id="height"></span>
+                    </div>
+                </div>
+
+                <div class="tags" id="tags" aria-label="Tags"></div>
+
+                <div class="actions">
+                    <a class="btn btn-fb" id="btnFacebook" target="_blank" rel="noopener" aria-label="Facebook">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path
+                                d="M22 12.06C22 6.48 17.52 2 11.94 2S2 6.48 2 12.06c0 4.99 3.66 9.13 8.44 9.94v-7.03H7.9V12.1h2.54V9.93c0-2.5 1.49-3.88 3.77-3.88 1.09 0 2.24.2 2.24.2v2.47h-1.26c-1.24 0-1.63.77-1.63 1.56v1.86h2.78l-.44 2.87h-2.34V22c4.78-.81 8.44-4.95 8.44-9.94z"
+                            />
+                        </svg>
+                        Facebook
+                    </a>
+                    <a class="btn btn-ig" id="btnInstagram" target="_blank" rel="noopener" aria-label="Instagram">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path
+                                d="M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5zm0 2a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3H7zm5 3.5A5.5 5.5 0 1 1 6.5 13 5.5 5.5 0 0 1 12 7.5zm0 2A3.5 3.5 0 1 0 15.5 13 3.5 3.5 0 0 0 12 9.5zM18 6.8a1.2 1.2 0 1 1-1.2 1.2A1.2 1.2 0 0 1 18 6.8z"
+                            />
+                        </svg>
+                        Instagram
+                    </a>
+                </div>
+            </section>
+        </article>
+
+        <script src="./test4.js" defer></script>
+    </body>
+</html>

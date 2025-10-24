@@ -1,0 +1,39 @@
+{
+  "avatar": "https://www.javdatabase.com/idolimages/full/ai-uehara.webp",
+  "bio": "4.61/5",
+  "country": "Fukuoka",
+  "cover": "https://picsum.photos/seed/cover_588/1200/675",
+  "debut": "?",
+  "dob": "1992-11-12",
+  "favorites": 172,
+  "films": [
+    { "code": "mimk-031", "thumb": "https://pics.dmm.co.jp/digital/video/mimk00031/mimk00031ps.jpg" },
+    { "code": "mstt-011", "thumb": "https://pics.dmm.co.jp/digital/video/mstt00011/mstt00011ps.jpg" },
+    { "code": "mizd-024", "thumb": "https://pics.dmm.co.jp/digital/video/mizd00024/mizd00024ps.jpg" },
+    { "code": "vgd-164", "thumb": "https://pics.dmm.co.jp/digital/video/h_172vgd00164/h_172vgd00164ps.jpg" },
+    { "code": "hnd-255", "thumb": "https://pics.dmm.co.jp/digital/video/hnd00255/hnd00255ps.jpg" },
+    { "code": "mucd-120", "thumb": "https://pics.dmm.co.jp/digital/video/mucd00120/mucd00120ps.jpg" },
+    { "code": "svdvd-357", "thumb": "https://pics.dmm.co.jp/digital/video/1svdvd00357/1svdvd00357ps.jpg" },
+    { "code": "hpr-001", "thumb": "https://pics.dmm.co.jp/digital/video/h_443hpr00001/h_443hpr00001ps.jpg" }
+  ],
+  "id": "588",
+  "jp": "上原亜衣",
+  "measurements": { "bust": "83", "height": "155", "hips": "82", "waist": "57", "weight": "" },
+  "name": "ai-uehara",
+  "pictures": [
+    "/images/idol-pictures/ai-uehara-1.jpg",
+    "/images/idol-pictures/ai-uehara-2.jpg",
+    "/images/idol-pictures/ai-uehara-3.jpg",
+    "/images/idol-pictures/ai-uehara-4.jpg",
+    "/images/idol-pictures/ai-uehara-5.jpg",
+    "/images/idol-pictures/ai-uehara-6.jpg",
+    "/images/idol-pictures/ai-uehara-7.jpg",
+    "/images/idol-pictures/ai-uehara-8.jpg",
+    "/images/idol-pictures/ai-uehara-9.jpg",
+    "/images/idol-pictures/ai-uehara-10.jpg"
+  ],
+  "rating": 4.61,
+  "socials": {},
+  "tags": ["e", "twenties"],
+  "videosCount": 933
+}
