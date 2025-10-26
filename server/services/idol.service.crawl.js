@@ -58,7 +58,7 @@ async function crawlIdolByName({ name_jdb, name_jher, name_jjg }) {
             }
             const showupData = JSON.parse(JSON.stringify(crawledFromJAVHer));
             delete showupData.movies;
-            console.log('[JAVHER]', '[fetchedData]', showupData);
+            // console.log('[JAVHER]', '[fetchedData]', data);
 
             fs.writeFileSync("test/samples/javher.json", JSON.stringify(crawledFromJAVHer));
         }
@@ -82,7 +82,7 @@ async function crawlIdolByName({ name_jdb, name_jher, name_jjg }) {
 
     const showupData = JSON.parse(JSON.stringify(data));
     delete showupData.movies;
-    console.log('[data]', showupData);
+    // console.log('[data]', showupData);
 
     fs.writeFileSync(`test/samples/data_${name_jdb}.json`, JSON.stringify(data));
 

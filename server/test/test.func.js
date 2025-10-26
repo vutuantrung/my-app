@@ -344,17 +344,6 @@ function saveBase64VideoAsMp4(base64Data, outputFilePath) {
 //     await browser.close();
 // })();
 
-//https://pics.dmm.co.jp/digital/video/mikr00038/mikr00038jp-4.jpg
-//https://pics.dmm.co.jp/digital/video/mikr00038/mikr00038pl.jpg
-//https://pics.dmm.co.jp/digital/video/mikr00038/mikr00038ps.jpg
-//https://pics.dmm.co.jp/mono/movie/adult/juq701/juq701pl.jpg
-//https://pics.dmm.co.jp/mono/actjpgs/hatano_yui.jpg
-
-//https://pics.dmm.co.jp/digital/video/sone00311/sone00311-1.jpg
-//https://pics.dmm.co.jp/digital/video/sone00311/sone00311jp-1.jpg
-
-//https://www.javdatabase.com/covers/full/mi/mikr00038pl.webp
-
 
 // ---------- Example usage ----------
 // (async () => {
@@ -374,5 +363,38 @@ function saveBase64VideoAsMp4(base64Data, outputFilePath) {
 //     }
 // })();
 
-const [a1, a2] = "".split("|");
-console.log(a1, a2);
+// Parse Date (important)
+// console.log(Date.parse("2020-11-26"));
+// console.log(new Date(1606348800000));
+
+// {
+//     const axios = require("axios");
+//     const [host, port, username, password] = '142.147.128.93:6593:skjpdwdk:wbf5e31thcpw'.split(":");
+//     const client = axios.create({
+//         proxy: {
+//             protocol: "http", host: host, port: port, auth: {
+//                 username: username
+//                 , password: password
+//             }
+//         },
+//         timeout: 8000,
+//         maxRedirects: 5,
+//         validateStatus: () => true,
+//     });
+
+//     async function isImageUrlViaAxiosProxy(url) {
+//         const head = await client.head(url).catch(() => null);
+//         if (head && head.status < 400) {
+//             const ct = String(head.headers["content-type"] || "").toLowerCase();
+//             if (ct.startsWith("image/")) return { ok: true, contentType: ct };
+//         }
+//         const res = await client.get(url, { responseType: "stream" });
+//         const ct = String(res.headers["content-type"] || "").toLowerCase();
+
+//         return { ok: ct.startsWith("image/"), contentType: ct || "unknown" };
+//     }
+
+//     isImageUrlViaAxiosProxy("https://jjgirls.com/japanese/rin-karasawa/7/rin-karasawa-13.jpg").then(res => {
+//         console.log(res);
+//     })
+// }

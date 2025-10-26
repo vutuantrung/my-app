@@ -50,6 +50,21 @@ async function searchIdolsByMovieCode(movieCode) {
     });
 }
 
+async function searchIdolsByMovieCodeContent(movieCode, movieContentId) {
+    const sql = "SELECT * FROM idol_movie WHERE movie_code = ? AND movie_contentId = ?";
+    return new Promise((resolve, reject) => {
+        db.all(sql, [movieCode, movieContentId],
+            (err, row) => {
+                if (err) {
+                    console.log('[searchIdolsByMovieCode]', `Search failed: ${err.message}`);
+                    reject(err);
+                } else {
+                    resolve(row || null);
+                }
+            });
+    });
+}
+
 // CREATE
 async function createIdolMovies(idolMovies) {
     if (Array.isArray(idolMovies) && idolMovies.length === 0) return "Empty";
@@ -81,7 +96,7 @@ async function createIdolMovies(idolMovies) {
     })
 }
 
-module.exports = { getAll, createIdolMovies, searchIdolsByMovieCode, searchMovieByIdolName }
+module.exports = { getAll, createIdolMovies, searchIdolsByMovieCode, searchIdolsByMovieCodeContent, searchMovieByIdolName }
 
 // getAll().then(rows => {
 //     const map = new Map();

@@ -35,6 +35,7 @@ db.serialize(() => {
     db.run(`
     CREATE TABLE IF NOT EXISTS movie (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      contentId TEXT NOT NULL,
       code TEXT NOT NULL,
       title TEXT,
       studio TEXT,
@@ -53,19 +54,20 @@ db.serialize(() => {
 
     db.run(`
 		CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_movie
-		ON movie (code);
+		ON movie (code, contentId);
 	`);
 
     // relation: idol - movie
     db.run(`
     CREATE TABLE IF NOT EXISTS idol_movie (
       idol_name TEXT NOT NULL,
-      movie_code TEXT NOT NULL
+      movie_code TEXT NOT NULL,
+      movie_contentId TEXT
     )`);
 
     db.run(`
 		CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_idolmovie
-		ON idol_movie (idol_name, movie_code);
+		ON idol_movie (idol_name, movie_code, movie_contentId);
 	`);
 });
 

@@ -2,7 +2,7 @@
 const db = require("../database/db");
 const { createPropertiesCREATEColumns, createPropertiesValues, createRecordArrayByPropertyName, createPropertiesUPDATEColumns } = require("../helpers");
 
-const columns = ["code", "title", "studio", "release_date", "runtime", "note", "favorite", "my_favorite", "thumbs_short", "thumbs", "images", "created_time", "updated_time", "metadata"];
+const columns = ["code", "contentId", "title", "studio", "release_date", "runtime", "note", "favorite", "my_favorite", "thumbs_short", "thumbs", "images", "created_time", "updated_time", "metadata"];
 
 function dbAll(db, sql, params = []) {
     return new Promise((resolve, reject) => {
@@ -60,6 +60,33 @@ async function searchMovieByCode(code) {
 
     if (terms.length > 0) {
         const orClause = terms.map(() => 'code = ?').join(' OR ');
+        query += ` WHERE ${orClause}`;
+        params = terms;
+    }
+
+    return new Promise((resolve, reject) => {
+        db.all(query, params, (err, rows) => {
+            if (err) {
+                console.log('[searchMoviesByCode]', `Search failed: ${err.message}`);
+                resolve({ err: err.message });
+            }
+            // console.log(rows)
+            resolve({ data: rows });
+        });
+    })
+}
+
+async function searchMovieByContentId(contentId) {
+    if (!contentId) {
+        return;
+    }
+
+    const terms = contentId ? contentId.split(',').map(n => n.trim()).filter(Boolean) : [];
+    let query = 'SELECT * FROM movie';
+    let params = [];
+
+    if (terms.length > 0) {
+        const orClause = terms.map(() => 'contentId = ?').join(' OR ');
         query += ` WHERE ${orClause}`;
         params = terms;
     }
@@ -186,6 +213,23 @@ async function updateMovieByCode(code, updateData /* Map */) {
     });
 }
 
+async function updateMovieByContentId(contentId, updateData /* Map */) {
+    const { setString, valuesArr } = createPropertiesUPDATEColumns(updateData);
+    const sql = `UPDATE movie SET ${setString} WHERE contentId = ?`;
+    return new Promise((resolve, reject) => {
+        db.run(sql, [...valuesArr, contentId],
+            function (err) {
+                if (err) {
+                    console.log('[updateMovieByContentId]', `Update failed: ${err.message}`)
+                    resolve(null);
+                }
+                console.log('[updateMovieByContentId]', `Update successfully: ${contentId}`)
+                resolve(contentId);
+            }
+        );
+    });
+}
+
 // DELETE
 async function deleteMovieById(id) {
     const sql = "DELETE FROM movie WHERE id = ?";
@@ -205,10 +249,12 @@ async function deleteMovieById(id) {
 module.exports = {
     searchMovieByCode,
     searchMoviesByCodes,
+    searchMovieByContentId,
     createMovies,
     updateMovieByCode,
     deleteMovieById,
     searchMovieByNote,
     searchMovieByMyFavorite,
-    searchMovieByFavorite
+    searchMovieByFavorite,
+    updateMovieByContentId
 }

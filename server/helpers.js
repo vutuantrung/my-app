@@ -285,68 +285,74 @@ function dashToTitleCase(input) {
         .join(' ');
 }
 
-function renderMovieHTMLTemplate(movieData, idolList) {
-    const htmlTemplateString = fs.readFileSync("./assets/TEMPLATE_MOVIE.html", "utf-8");
-    const html = parse(htmlTemplateString);
+function renderMovieHTMLTemplate(movieDatas) {
+    const moviesTemplateString = fs.readFileSync("./assets/TEMPLATE_MOVIES.html", "utf-8");
+    const html = parse(moviesTemplateString);
 
-    // Title
-    html.getElementById("title").innerText = movieData.title;
+    for (const movieData of movieDatas) {
+        const movieTemplateString = fs.readFileSync("./assets/TEMPLATE_MOVIE.html", "utf-8");
+        const articleElement = parse(movieTemplateString);
 
-    // Poster image
-    const posterImgEle = html.getElementById("posterImage");
-    if (posterImgEle) {
-        const element = `<img src="${movieData.thumbs ?? movieData.thumbs_short}" itemprop="image" loading="eager" decoding="async" style="object-fit: contain;" />`;
-        posterImgEle.innerHTML += element;
-    }
+        // Title
+        articleElement.querySelector(".poster__title").innerText = movieData.title;
 
-    // Release Date
-    html.getElementById("releaseDate").innerHTML += `<span class="spanText">${movieData.release_date}</span>`;
-
-    // Runtime
-    html.getElementById("runTime").innerHTML += `<span class="spanText">${movieData.runtime}</span>`;
-
-    const metadata = JSON.parse(movieData.metadata);
-    if (!metadata) {
-        console.log(movieData);
-    }
-
-    // Tags
-    const tagSection = html.getElementById("tags");
-    const genres = metadata?.genres;
-    if (genres) {
-        const genreVals = genres.split("|");
-        for (const genre of genreVals) {
-            const element = `<span class="chip chip--id" itemprop="identifier">${genre}</span>`;
-            tagSection.innerHTML += element;
+        // Poster image
+        const posterImgEle = articleElement.querySelector(".poster__media");
+        if (posterImgEle) {
+            const element = `<img src="${movieData.thumbs ?? movieData.thumbs_short}" itemprop="image" loading="eager" decoding="async" style="object-fit: contain;" />`;
+            posterImgEle.innerHTML += element;
         }
-    }
 
-    // Casts
-    html.getElementById("castsCount").innerText = `(${idolList.length})`
-    const idolSection = html.getElementById("casts");
-    const reversedIdolNames = idolList.map(name => reverseIdolName(name));
-    for (const idolName of reversedIdolNames) {
-        const element = `<span class="chip">${idolName}</span>`
-        idolSection.innerHTML += element;
-    }
+        // Release Date
+        articleElement.querySelector(".released_date").innerHTML += `<span class="spanText">${movieData.release_date}</span>`;
 
-    // Thumbs
-    const thumbnailsSection = html.getElementById("thumbnails");
-    const scenceImages = movieData.images?.split("|");
-    if (Array.isArray(scenceImages)) {
-        for (const imgUrl of scenceImages) {
-            if (!imgUrl) continue;
-            const { full } = classifyThumbsType(imgUrl);
-            const element = `
+        // Runtime
+        articleElement.querySelector(".run_time").innerHTML += `<span class="spanText">${movieData.runtime}</span>`;
+
+        const metadata = JSON.parse(movieData.metadata);
+        if (!metadata) {
+            console.log(movieData);
+        }
+
+        // Tags
+        const tagSection = articleElement.querySelector(".tags");
+        const genres = metadata?.genres;
+        if (genres) {
+            const genreVals = genres.split("|");
+            for (const genre of genreVals) {
+                const element = `<span class="chip chip--id" itemprop="identifier">${genre}</span>`;
+                tagSection.innerHTML += element;
+            }
+        }
+
+        // Casts
+        articleElement.querySelector(".casts_count").innerText = `(${movieData.idolList.length})`
+        const idolSection = articleElement.querySelector(".casts");
+        const reversedIdolNames = movieData.idolList.map(name => reverseIdolName(name));
+        for (const idolName of reversedIdolNames) {
+            const element = `<span class="chip">${idolName}</span>`
+            idolSection.innerHTML += element;
+        }
+
+        // Thumbs
+        const thumbnailsSection = articleElement.querySelector(".thumbs");
+        const scenceImages = movieData.images?.split("|");
+        if (Array.isArray(scenceImages)) {
+            for (const imgUrl of scenceImages) {
+                if (!imgUrl) continue;
+                const { full } = classifyThumbsType(imgUrl);
+                const element = `
                         <a class="thumb" href="${full}" aria-label="Scene 1">
                             <img src="${full}"alt="Scene 1" loading="lazy" decoding="async">
                         </a>`;
-            thumbnailsSection.innerHTML += element;
+                thumbnailsSection.innerHTML += element;
+            }
         }
-    }
 
-    // Code
-    html.getElementById("movieCode").innerHTML += `<span class="spanText">${movieData.code.toUpperCase()}</span>`;
+        // Code
+        articleElement.querySelector(".id").innerHTML += `<span class="spanText">${movieData.code.toUpperCase()}</span>`;
+        html.getElementById("main_container").appendChild(articleElement);
+    }
 
     return html.toString();
 }
