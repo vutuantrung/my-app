@@ -46,7 +46,7 @@ function parseTags(meta) {
 			return (v || k || '').split(',')[0];
 		})
 		.filter(Boolean)
-		.map(s => s.trim());
+		.map(s => formatName(s.trim()));
 }
 
 function parseMetaData(metaData) {
@@ -187,10 +187,10 @@ export default function ActressScreen() {
 	const renderItem = ({ item }) => {
 		// console.log(item.avatar)
 		return (
-			<Pressable style={styles.card} onPress={() => openDetail(item)}>
+			<Pressable key={item.id} style={styles.card} onPress={() => openDetail(item)}>
 				<Image source={{ uri: item.avatar }} style={styles.avatar} />
 				<Text style={styles.name} numberOfLines={1}>{formatName(item.name)}</Text>
-				<Text style={styles.meta}>{item.videosCount} videos</Text>
+				<Text style={styles.meta}>{item.videosCount} video(s)</Text>
 			</Pressable>
 		)
 	};
@@ -247,6 +247,7 @@ const styles = StyleSheet.create({
 		paddingVertical: 10,
 		borderWidth: 1,
 		borderColor: '#1f2430',
+		marginTop: 20
 	},
 	card: { width: CARD_W, alignItems: 'center' },
 	avatar: {
@@ -257,3 +258,4 @@ const styles = StyleSheet.create({
 	},
 	meta: { color: '#9aa4b2', fontSize: 12, marginTop: 2, textAlign: 'center' },
 });
+//lets add a new feature in Search actress in ActressScreen: 

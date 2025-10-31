@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import { formatName } from '../helper';
 
 const { width } = Dimensions.get('window');
 const COVER_H = Math.round(width * 9 / 16);
@@ -49,7 +50,7 @@ function parseTags(meta) {
 			const [k, v] = kv.split(':');
 			// console.log(k)
 			if (['debut_age', 'birth_year', 'debut_year', 'birthplace', 'starsign', 'blood_type', 'height'].includes(k?.toLowerCase())) return null;
-			if (k === 'cup') return "Cup " + v.toUpperCase()
+			if (k === 'cup_size') return v.toUpperCase() + ("(Cup size)")
 			return (v || k || '').split(',')[0];
 		})
 		.filter(Boolean)
@@ -142,8 +143,6 @@ export default function ActressDetailScreen() {
 		actress: null,
 	});
 
-	const [actressData, setActressData] = React.useState(null);
-
 	// Fetch on mount/by name
 	React.useEffect(() => {
 		let cancelled = false;
@@ -167,11 +166,11 @@ export default function ActressDetailScreen() {
 				});
 				if (!res.ok) throw new Error(`HTTP ${res.status}`);
 				const actressData = await res.json(); // single object per your sample
-				console.log('[actressData]', actressData)
+				// console.log('[actressData]', actressData)
 				if (!actressData) throw new Error('Not found');
 
 				const actress = mapServerToActress(actressData);
-				console.log('[actress]', actress)
+				// console.log('[actress]', actress)
 				// setActressData(actress)
 				if (!cancelled) setState({ loading: false, error: null, actress });
 			} catch (e) {
@@ -228,7 +227,7 @@ export default function ActressDetailScreen() {
 	}
 
 	// Derive capped lists
-	console.log('[actress]', actress)
+	// console.log('[actress]', actress.films)
 	const filmsTop = (actress.films || []).slice(0, 8);
 	const pictures = (actress.pictures || []).slice(0, 10);
 
@@ -252,17 +251,18 @@ export default function ActressDetailScreen() {
 		};
 		return (
 			<Pressable
+				key={item.code}
 				style={styles.filmCard}
 				onPress={() => navigation.navigate('FilmDetail', { film: filmPayload })}
 			>
 				<Image source={{ uri: item.thumb }} style={styles.filmCover} />
-				<Text style={styles.filmTitle} numberOfLines={1}>{item.title}</Text>
-				<Text style={styles.filmCode}>{item.code}</Text>
+				{/* <Text style={styles.filmTitle} numberOfLines={1}>{item.title}</Text> */}
+				<Text style={styles.filmCode}>{item.code.toUpperCase()}</Text>
 			</Pressable>
 		);
 	};
 
-	const renderPicture = ({ item }) => { return <PictureItem uri={"http://192.168.1.77:3123" + item} /> };
+	const renderPicture = ({ item }) => { return <PictureItem key={item} uri={"http://192.168.1.77:3123" + item} /> };
 
 	const openUrl = async (url) => {
 		try { if (url && (await Linking.canOpenURL(url))) await Linking.openURL(url); } catch { }
@@ -279,7 +279,7 @@ export default function ActressDetailScreen() {
 			</View>
 
 			{/* Name */}
-			<Text style={styles.name}>{actress.name}</Text>
+			<Text style={styles.name}> {formatName(actress.name)}</Text>
 
 			{/* About */}
 			<View style={styles.section}>
@@ -291,24 +291,18 @@ export default function ActressDetailScreen() {
 			<View style={styles.section}>
 				<Text style={styles.sectionTitle}>Social</Text>
 				<View style={styles.socialRow}>
-					{actress?.socials?.twitter ? (
-						<Pressable style={styles.socialBtn} onPress={() => openUrl(actress.socials.twitter)}>
-							<Ionicons name="logo-twitter" size={18} color="#e7ecf3" />
-							<Text style={styles.socialText}>Twitter</Text>
-						</Pressable>
-					) : null}
-					{actress?.socials?.instagram ? (
-						<Pressable style={styles.socialBtn} onPress={() => openUrl(actress.socials.instagram)}>
-							<Ionicons name="logo-instagram" size={18} color="#e7ecf3" />
-							<Text style={styles.socialText}>Instagram</Text>
-						</Pressable>
-					) : null}
-					{actress?.socials?.website ? (
-						<Pressable style={styles.socialBtn} onPress={() => openUrl(actress.socials.website)}>
-							<Ionicons name="globe-outline" size={18} color="#e7ecf3" />
-							<Text style={styles.socialText}>Website</Text>
-						</Pressable>
-					) : null}
+					<Pressable style={styles.socialBtn} onPress={() => openUrl(actress.socials.twitter)}>
+						<Ionicons name="logo-twitter" size={18} color="#e7ecf3" />
+						<Text style={styles.socialText}>Twitter</Text>
+					</Pressable>
+					<Pressable style={styles.socialBtn} onPress={() => openUrl(actress.socials.instagram)}>
+						<Ionicons name="logo-instagram" size={18} color="#e7ecf3" />
+						<Text style={styles.socialText}>Instagram</Text>
+					</Pressable>
+					<Pressable style={styles.socialBtn} onPress={() => openUrl(actress.socials.website)}>
+						<Ionicons name="globe-outline" size={18} color="#e7ecf3" />
+						<Text style={styles.socialText}>Website</Text>
+					</Pressable>
 				</View>
 			</View>
 
@@ -421,7 +415,7 @@ export default function ActressDetailScreen() {
 					<Text style={styles.sectionTitle}>Pictures</Text>
 					<FlatList
 						data={pictures}
-						keyExtractor={(p) => p.id}
+						keyExtractor={(item, index) => index.toString()}
 						renderItem={renderPicture}
 						ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
 						contentContainerStyle={{ paddingHorizontal: 16 }}

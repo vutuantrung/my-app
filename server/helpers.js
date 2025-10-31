@@ -7,429 +7,432 @@ const { promisify } = require('util');
 const { pipeline } = require('stream');
 
 function secondsToHms(d) {
-    d = Number(d);
-    const h = Math.floor(d / 3600);
-    const m = Math.floor(d % 3600 / 60);
-    const s = Math.floor(d % 3600 % 60);
+	d = Number(d);
+	const h = Math.floor(d / 3600);
+	const m = Math.floor(d % 3600 / 60);
+	const s = Math.floor(d % 3600 % 60);
 
-    const hDisplay = h > 0 ? h : "";
-    const mDisplay = m > 0 ? m : "";
-    const sDisplay = s > 0 ? s : "";
+	const hDisplay = h > 0 ? h : "";
+	const mDisplay = m > 0 ? m : "";
+	const sDisplay = s > 0 ? s : "";
 
-    const times = [hDisplay, mDisplay, sDisplay].filter(t => t);
-    const value = times.reduce((acc, cur) => acc + ":" + cur);
+	const times = [hDisplay, mDisplay, sDisplay].filter(t => t);
+	const value = times.reduce((acc, cur) => acc + ":" + cur);
 
-    return value;
+	return value;
 }
 
 function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
+	return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 function createPropertiesCREATEColumns(properties) {
-    return `(${properties.join(', ')})`;
+	return `(${properties.join(', ')})`;
 }
 
 function createPropertiesValues(properties) {
-    return `(${properties.map(() => '?').join(', ')})`;
+	return `(${properties.map(() => '?').join(', ')})`;
 }
 
 function createPropertiesUPDATEColumns(updateData) {
-    const setValues = [];
-    const values = [];
-    for (const [key, value] of Object.entries(updateData)) {
-        if (key === "updated_time") continue;// Ignore current updated_time and replace it the newer one
-        setValues.push(`${key} = ?`);
-        values.push(value);
-    }
+	const setValues = [];
+	const values = [];
+	for (const [key, value] of Object.entries(updateData)) {
+		if (key === "updated_time") continue;// Ignore current updated_time and replace it the newer one
+		if (key === "avatar") continue;
+		if (key === "cover") continue;
+		setValues.push(`${key} = ?`);
+		values.push(value);
+	}
 
-    // Add updated_time value
-    setValues.push("updated_time = ?");
-    values.push(Date.now());
-    return {
-        setString: setValues.join(', '),
-        valuesArr: values
-    }
+	// Add updated_time value
+	setValues.push("updated_time = ?");
+	values.push(Date.now());
+	return {
+		setString: setValues.join(', '),
+		valuesArr: values
+	}
 }
 
 function createRecordArrayByPropertyName(properties, record) {
-    return properties.map((pName) => record[pName]);
+	return properties.map((pName) => record[pName]);
 }
 
 async function downloadImageByUrl(url, destFolder, fileName = "", axiosClient = null) {
-    try {
-        // get File name
-        fileName = fileName ? fileName : getFileNameFromUrl(url);
-        const destPath = path.join(destFolder, fileName);
-        if (fs.existsSync(destPath)) {
-            console.log(`📌 ${fileName} downloaded.`);
-            return true;
-        }
+	try {
+		// get File name
+		fileName = fileName ? fileName : getFileNameFromUrl(url);
+		const destPath = path.join(destFolder, fileName);
+		if (fs.existsSync(destPath)) {
+			console.log(`📌 ${fileName} downloaded.`);
+			return true;
+		}
 
-        const headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
-            'Accept': 'image/webp,image/apng,image/*,*/*;q=0.8',
-            'Referer': 'https://google.com', // sometimes required
-        };
+		const headers = {
+			'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
+			'Accept': 'image/webp,image/apng,image/*,*/*;q=0.8',
+			'Referer': 'https://google.com', // sometimes required
+		};
 
-        // Ensure directory exists
-        fs.mkdirSync(path.dirname(destFolder), { recursive: true });
+		// Ensure directory exists
+		fs.mkdirSync(path.dirname(destFolder), { recursive: true });
 
-        let success = false, response = null;
-        for (let i = 0; i < 3; i++) {
-            try {
-                response = axiosClient
-                    ? await axiosClient.get(url)
-                    : await axios.get(url, {
-                        responseType: 'stream',
-                        timeout: 10000,
-                        headers,
-                    })
+		let success = false, response = null;
+		for (let i = 0; i < 3; i++) {
+			try {
+				response = axiosClient
+					? await axiosClient.get(url)
+					: await axios.get(url, {
+						responseType: 'stream',
+						timeout: 10000,
+						headers,
+					})
 
-                const isNowPrintingImage = response.request.res.responseUrl.split("/").pop() === "now_printing.jpg";
-                if (isNowPrintingImage) {
-                    break;
-                }
+				const isNowPrintingImage = response.request.res.responseUrl.split("/").pop() === "now_printing.jpg";
+				if (isNowPrintingImage) {
+					break;
+				}
 
-                // const response = await axios.get(url, {
-                //     responseType: 'stream',
-                //     timeout: 10000,
-                //     headers,
-                // });
-                const writer = fs.createWriteStream(destPath);
-                response.data.pipe(writer);
-                await new Promise((resolve, reject) => {
-                    writer.on('finish', resolve);
-                    writer.on('error', reject);
-                });
-                success = true;
+				// const response = await axios.get(url, {
+				//     responseType: 'stream',
+				//     timeout: 10000,
+				//     headers,
+				// });
+				const writer = fs.createWriteStream(destPath);
+				response.data.pipe(writer);
+				await new Promise((resolve, reject) => {
+					writer.on('finish', resolve);
+					writer.on('error', reject);
+				});
+				success = true;
 
-                break;
-            } catch (error) {
-                success = false;
-                // console.log("❌ Download failed: ", fileName, ".\n==Error: " + error.message + ".\n==Retry ", i + 1, "time(s).");
-            }
-        }
+				break;
+			} catch (error) {
+				success = false;
+				// console.log("❌ Download failed: ", fileName, ".\n==Error: " + error.message + ".\n==Retry ", i + 1, "time(s).");
+			}
+		}
 
-        // const response = await axios.get(url, {
-        //     responseType: 'stream',
-        //     timeout: 10000,
-        //     headers,
-        // });
-        if (!success) {
-            throw new Error();
-        }
-        console.log(`✅🎞️ Downloaded ${fileName}`);
+		// const response = await axios.get(url, {
+		//     responseType: 'stream',
+		//     timeout: 10000,
+		//     headers,
+		// });
+		if (!success) {
+			throw new Error();
+		}
+		console.log(`✅🎞️ Downloaded ${fileName}`);
 
-        return true;
-    } catch (err) {
-        console.error('❌ Download failed:', url);
-        return false;
-    }
+		return true;
+	} catch (err) {
+		console.error('❌ Download failed:', url);
+		return false;
+	}
 }
 
 const streamPipeline = promisify(pipeline);
 
 async function downloadMovieByUrl(url, destFolder, fileName, timeoutMs) {
-    if (fs.existsSync(path.join(destFolder, fileName))) {
-        console.log("📌", fileName, "downloaded.");
-        return;
-    }
-    // Timeout via AbortController
-    const controller = new AbortController();
-    const t = setTimeout(() => controller.abort(new Error("Fetch timeout")), timeoutMs);
+	if (fs.existsSync(path.join(destFolder, fileName))) {
+		console.log("📌", fileName, "downloaded.");
+		return;
+	}
+	// Timeout via AbortController
+	const controller = new AbortController();
+	const t = setTimeout(() => controller.abort(new Error("Fetch timeout")), timeoutMs);
 
-    let res;
-    try {
-        res = await fetch(url, {
-            method: "GET",
-            signal: controller.signal,
-            headers: {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-                "Accept": "video/mp4, */*;q=0.8",
-                "Accept-Encoding": "identity;q=1, *;q=0", // no gzip
-                "sec-ch-ua": '"Chromium";v="140", "Not=A?Brand";v="24", "Google Chrome";v="140"',
-                "sec-ch-ua-mobile": "?0",
-                "sec-ch-ua-platform": '"Windows"',
-                "sec-fetch-dest": "video",
-            }
-        });
-    } finally {
-        clearTimeout(t);
-    }
+	let res;
+	try {
+		res = await fetch(url, {
+			method: "GET",
+			signal: controller.signal,
+			headers: {
+				"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+				"Accept": "video/mp4, */*;q=0.8",
+				"Accept-Encoding": "identity;q=1, *;q=0", // no gzip
+				"sec-ch-ua": '"Chromium";v="140", "Not=A?Brand";v="24", "Google Chrome";v="140"',
+				"sec-ch-ua-mobile": "?0",
+				"sec-ch-ua-platform": '"Windows"',
+				"sec-fetch-dest": "video",
+			}
+		});
+	} finally {
+		clearTimeout(t);
+	}
 
-    if (!res.ok) {
-        throw new Error(`HTTP ${res.status} ${res.statusText} for ${url}`);
-    }
+	if (!res.ok) {
+		throw new Error(`HTTP ${res.status} ${res.statusText} for ${url}`);
+	}
 
-    const ctype = res.headers.get("content-type") || "";
-    const clen = Number(res.headers.get("content-length") || 0);
+	const ctype = res.headers.get("content-type") || "";
+	const clen = Number(res.headers.get("content-length") || 0);
 
-    // Strong opinion: reject obviously wrong responses early.
-    if (!/video\/mp4|application\/octet-stream/i.test(ctype)) {
-        throw new Error(`Unexpected content-type "${ctype}" for ${url}`);
-    }
-    if (Number.isFinite(clen) && clen <= 0) {
-        throw new Error(`Empty content-length for ${url}`);
-    }
-    if (!res.body) {
-        throw new Error(`No response body for ${url}`);
-    }
+	// Strong opinion: reject obviously wrong responses early.
+	if (!/video\/mp4|application\/octet-stream/i.test(ctype)) {
+		throw new Error(`Unexpected content-type "${ctype}" for ${url}`);
+	}
+	if (Number.isFinite(clen) && clen <= 0) {
+		throw new Error(`Empty content-length for ${url}`);
+	}
+	if (!res.body) {
+		throw new Error(`No response body for ${url}`);
+	}
 
-    const destPath = path.join(destFolder, fileName);
-    const fileStream = fs.createWriteStream(destPath, { flags: "w" });
-    await streamPipeline(res.body, fileStream);
+	const destPath = path.join(destFolder, fileName);
+	const fileStream = fs.createWriteStream(destPath, { flags: "w" });
+	await streamPipeline(res.body, fileStream);
 
-    // return { bytes: Number.isFinite(clen) ? clen : undefined };
+	// return { bytes: Number.isFinite(clen) ? clen : undefined };
 }
 
 function inverseName(name) {
-    const nameSegs = name.split("-");
-    if (nameSegs.length === 1) {
-        return name;
-    }
-    return nameSegs.reverse().join("-");
+	const nameSegs = name.split("-");
+	if (nameSegs.length === 1) {
+		return name;
+	}
+	return nameSegs.reverse().join("-");
 }
 
 async function fetchWithRetry(url, headers, proxyService, retryTimes) {
-    let fetchedData = null;
-    for (let i = 0; i < retryTimes; i++) {
-        try {
-            if (i > 0) console.log("Retry", i + 1, "time(s).");
-            const client = proxyService.axiosForNextProxy({
-                headers: headers
-            });
+	let fetchedData = null;
+	for (let i = 0; i < retryTimes; i++) {
+		try {
+			if (i > 0) console.log("Retry", i + 1, "time(s).");
+			const client = proxyService.axiosForNextProxy({
+				headers: headers
+			});
 
-            const res = await client.get(url);
-            // console.log("Proxy used:", client._proxy.url, url);
-            fetchedData = res.data;
-            break;
-        } catch (error) {
-            if (error.message.includes("code 404")) {
-                console.log("Page 404!");
-                break;
-            }
-            console.log(error.message);
-        }
-    }
+			const res = await client.get(url);
+			// console.log("Proxy used:", client._proxy.url, url);
+			fetchedData = res.data;
+			break;
+		} catch (error) {
+			if (error.message.includes("code 404")) {
+				console.log("Page 404!");
+				break;
+			}
+			console.log(error.message);
+		}
+	}
 
-    return fetchedData;
+	return fetchedData;
 }
 
 async function downloadWithRetry(url, destFolder, fileName, proxyService, retryTimes) {
-    for (let i = 1; i <= retryTimes; i++) {
-        const client = proxyService.axiosForNextProxy({
-            responseType: "stream",
-            timeout: 10000,
-            headers: {
-                'Accept': 'application/json',
-                'Authorization': 'HAHA_ADAM_HAVE_TO_RESORT_TO_THIS#@!@#',
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36',
-                'Cookie': 'user-country=USN'
-            }
-        });
-        const downloadSuccess = await downloadImageByUrl(url, destFolder, fileName, client);
-        if (downloadSuccess) {
-            return true;
-        }
-    }
+	for (let i = 1; i <= retryTimes; i++) {
+		const client = proxyService.axiosForNextProxy({
+			responseType: "stream",
+			timeout: 10000,
+			headers: {
+				'Accept': 'application/json',
+				'Authorization': 'HAHA_ADAM_HAVE_TO_RESORT_TO_THIS#@!@#',
+				'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36',
+				'Cookie': 'user-country=USN'
+			}
+		});
+		const downloadSuccess = await downloadImageByUrl(url, destFolder, fileName, client);
+		if (downloadSuccess) {
+			return true;
+		}
+	}
 
-    return false;
+	return false;
 }
 
 function getFileNameFromUrl(imageUrl) {
-    try {
-        const parsedUrl = new URL(imageUrl);
-        return path.basename(parsedUrl.pathname);
-    } catch (err) {
-        console.error('Invalid URL:', err.message);
-        return '';
-    }
+	try {
+		const parsedUrl = new URL(imageUrl);
+		return path.basename(parsedUrl.pathname);
+	} catch (err) {
+		console.error('Invalid URL:', err.message);
+		return '';
+	}
 }
 
 function reverseIdolName(name) {
-    return name.split("-").map(e => e.charAt(0).toUpperCase() + e.slice(1)).join(" ");
+	return name.split("-").map(e => e.charAt(0).toUpperCase() + e.slice(1)).join(" ");
 }
 
 function parseIdolName(name) {
-    if (!name.trim().includes(" ")) return name.toLowerCase();
-    return name.trim().split(" ").map(e => e.toLowerCase()).join("-");
+	if (!name.trim().includes(" ")) return name.toLowerCase();
+	return name.trim().split(" ").map(e => e.toLowerCase()).join("-");
 }
 
 function treatMovieCode(code) {
-    return code.toLowerCase().trim();
+	return code.toLowerCase().trim();
 }
 
 function toMime(ext) {
-    switch (ext.toLowerCase()) {
-        case '.png': return 'image/png';
-        case '.jpg':
-        case '.jpeg': return 'image/jpeg';
-        case '.gif': return 'image/gif';
-        case '.svg': return 'image/svg+xml';
-        case '.webp': return 'image/webp';
-        case '.bmp': return 'image/bmp';
-        case '.ico': return 'image/x-icon';
-        default: return 'application/octet-stream';
-    }
+	switch (ext.toLowerCase()) {
+		case '.png': return 'image/png';
+		case '.jpg':
+		case '.jpeg': return 'image/jpeg';
+		case '.gif': return 'image/gif';
+		case '.svg': return 'image/svg+xml';
+		case '.webp': return 'image/webp';
+		case '.bmp': return 'image/bmp';
+		case '.ico': return 'image/x-icon';
+		default: return 'application/octet-stream';
+	}
 }
 
 function dashToTitleCase(input) {
-    if (typeof input !== 'string') return '';
-    return input
-        .split('-')
-        .map(word => {
-            if (!word) return '';
-            return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
-        })
-        .join(' ');
+	if (typeof input !== 'string') return '';
+	return input
+		.split('-')
+		.map(word => {
+			if (!word) return '';
+			return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+		})
+		.join(' ');
 }
 
 function renderMovieHTMLTemplate(movieDatas) {
-    const moviesTemplateString = fs.readFileSync("./assets/TEMPLATE_MOVIES.html", "utf-8");
-    const html = parse(moviesTemplateString);
+	const moviesTemplateString = fs.readFileSync("./assets/TEMPLATE_MOVIES.html", "utf-8");
+	const html = parse(moviesTemplateString);
 
-    for (const movieData of movieDatas) {
-        const movieTemplateString = fs.readFileSync("./assets/TEMPLATE_MOVIE.html", "utf-8");
-        const articleElement = parse(movieTemplateString);
+	for (const movieData of movieDatas) {
+		console.log('[movieData]', movieData)
+		const movieTemplateString = fs.readFileSync("./assets/TEMPLATE_MOVIE.html", "utf-8");
+		const articleElement = parse(movieTemplateString);
 
-        // Title
-        articleElement.querySelector(".poster__title").innerText = movieData.title;
+		// Title
+		articleElement.querySelector(".poster__title").innerText = movieData.title;
 
-        // Poster image
-        const posterImgEle = articleElement.querySelector(".poster__media");
-        if (posterImgEle) {
-            const element = `<img src="${movieData.thumbs ?? movieData.thumbs_short}" itemprop="image" loading="eager" decoding="async" style="object-fit: contain;" />`;
-            posterImgEle.innerHTML += element;
-        }
+		// Poster image
+		const posterImgEle = articleElement.querySelector(".poster__media");
+		if (posterImgEle) {
+			const element = `<img src="${movieData.thumbs ?? movieData.thumbs_short}" itemprop="image" loading="eager" decoding="async" style="object-fit: contain;" />`;
+			posterImgEle.innerHTML += element;
+		}
 
-        // Release Date
-        articleElement.querySelector(".released_date").innerHTML += `<span class="spanText">${movieData.release_date}</span>`;
+		// Release Date
+		articleElement.querySelector(".released_date").innerHTML += `<span class="spanText">${movieData.release_date}</span>`;
 
-        // Runtime
-        articleElement.querySelector(".run_time").innerHTML += `<span class="spanText">${movieData.runtime}</span>`;
+		// Runtime
+		articleElement.querySelector(".run_time").innerHTML += `<span class="spanText">${movieData.runtime}</span>`;
 
-        const metadata = JSON.parse(movieData.metadata);
-        if (!metadata) {
-            console.log(movieData);
-        }
+		const metadata = JSON.parse(movieData.metadata);
+		if (!metadata) {
+			// console.log(movieData);
+		}
 
-        // Tags
-        const tagSection = articleElement.querySelector(".tags");
-        const genres = metadata?.genres;
-        if (genres) {
-            const genreVals = genres.split("|");
-            for (const genre of genreVals) {
-                const element = `<span class="chip chip--id" itemprop="identifier">${genre}</span>`;
-                tagSection.innerHTML += element;
-            }
-        }
+		// Tags
+		const tagSection = articleElement.querySelector(".tags");
+		const genres = metadata?.genres;
+		if (genres) {
+			const genreVals = genres.split("|");
+			for (const genre of genreVals) {
+				const element = `<span class="chip chip--id" itemprop="identifier">${genre}</span>`;
+				tagSection.innerHTML += element;
+			}
+		}
 
-        // Casts
-        articleElement.querySelector(".casts_count").innerText = `(${movieData.idolList.length})`
-        const idolSection = articleElement.querySelector(".casts");
-        const reversedIdolNames = movieData.idolList.map(name => reverseIdolName(name));
-        for (const idolName of reversedIdolNames) {
-            const element = `<span class="chip">${idolName}</span>`
-            idolSection.innerHTML += element;
-        }
+		// Casts
+		articleElement.querySelector(".casts_count").innerText = `(${movieData.idolList.length})`
+		const idolSection = articleElement.querySelector(".casts");
+		const reversedIdolNames = movieData.idolList.map(name => reverseIdolName(name));
+		for (const idolName of reversedIdolNames) {
+			const element = `<span class="chip">${idolName}</span>`
+			idolSection.innerHTML += element;
+		}
 
-        // Thumbs
-        const thumbnailsSection = articleElement.querySelector(".thumbs");
-        const scenceImages = movieData.images?.split("|");
-        if (Array.isArray(scenceImages)) {
-            for (const imgUrl of scenceImages) {
-                if (!imgUrl) continue;
-                const { full } = classifyThumbsType(imgUrl);
-                const element = `
+		// Thumbs
+		const thumbnailsSection = articleElement.querySelector(".thumbs");
+		const scenceImages = movieData.images?.split("|");
+		if (Array.isArray(scenceImages)) {
+			for (const imgUrl of scenceImages) {
+				if (!imgUrl) continue;
+				const { full } = classifyThumbsType(imgUrl);
+				const element = `
                         <a class="thumb" href="${full}" aria-label="Scene 1">
                             <img src="${full}"alt="Scene 1" loading="lazy" decoding="async">
                         </a>`;
-                thumbnailsSection.innerHTML += element;
-            }
-        }
+				thumbnailsSection.innerHTML += element;
+			}
+		}
 
-        // Code
-        articleElement.querySelector(".id").innerHTML += `<span class="spanText">${movieData.code.toUpperCase()}</span>`;
-        html.getElementById("main_container").appendChild(articleElement);
-    }
+		// Code
+		articleElement.querySelector(".id").innerHTML += `<span class="spanText">${movieData.code.toUpperCase()}</span>`;
+		html.getElementById("main_container").appendChild(articleElement);
+	}
 
-    return html.toString();
+	return html.toString();
 }
 
 function renderIdolHTMLTemplate(idolData, moviesData) {
-    const htmlTemplateString = fs.readFileSync("./assets/TEMPLATE_IDOL.html", "utf-8");
-    const html = parse(htmlTemplateString);
+	const htmlTemplateString = fs.readFileSync("./assets/TEMPLATE_IDOL.html", "utf-8");
+	const html = parse(htmlTemplateString);
 
-    const idolMetadata = JSON.parse(idolData.metadata);
+	const idolMetadata = JSON.parse(idolData.metadata);
 
-    // avatar
-    let currAvatarPath = "";
-    let imageGifPath = `./database/idol-avatars/${idolData.name}-avatar-gif.gif`;
-    let imagePath = `./database/idol-avatars/${idolData.name}-avatar.jpg`;
-    if (fs.existsSync(imageGifPath)) {
-        currAvatarPath = imageGifPath;
-    } else if (fs.existsSync(imagePath)) {
-        currAvatarPath = imagePath;
-    } else {
-        currAvatarPath = './database/idol-avatars/anonymous.png';
-    }
-    const abs = path.resolve(currAvatarPath);
-    const b64 = fs.readFileSync(currAvatarPath, "base64");
-    const mime = toMime(path.extname(abs));
-    const dataUri = `data:${mime};base64,${b64}`;
-    html.querySelector("img[class='avatar-img']").setAttribute("src", dataUri);
+	// avatar
+	let currAvatarPath = "";
+	let imageGifPath = `./database/idol-avatars/${idolData.name}-avatar-gif.gif`;
+	let imagePath = `./database/idol-avatars/${idolData.name}-avatar.jpg`;
+	if (fs.existsSync(imageGifPath)) {
+		currAvatarPath = imageGifPath;
+	} else if (fs.existsSync(imagePath)) {
+		currAvatarPath = imagePath;
+	} else {
+		currAvatarPath = './database/idol-avatars/anonymous.png';
+	}
+	const abs = path.resolve(currAvatarPath);
+	const b64 = fs.readFileSync(currAvatarPath, "base64");
+	const mime = toMime(path.extname(abs));
+	const dataUri = `data:${mime};base64,${b64}`;
+	html.querySelector("img[class='avatar-img']").setAttribute("src", dataUri);
 
-    // bios
-    const dateOfBirth = idolData.dob;
-    const biosElement = html.querySelector("div[class='bios']");
-    if (dateOfBirth) {
-        const ele = `<div class="bio-info"><span class="label">Date of birth</span><span class="value">${dateOfBirth}</span></div>`;
-        biosElement.innerHTML += ele;
-    }
+	// bios
+	const dateOfBirth = idolData.dob;
+	const biosElement = html.querySelector("div[class='bios']");
+	if (dateOfBirth) {
+		const ele = `<div class="bio-info"><span class="label">Date of birth</span><span class="value">${dateOfBirth}</span></div>`;
+		biosElement.innerHTML += ele;
+	}
 
-    const dateOfDebut = idolMetadata?.debut;
-    if (dateOfDebut) {
-        const ele = `<div class="bio-info"><span class="label">Date of debut</span><span class="value">${dateOfDebut}</span></div>`;
-        biosElement.innerHTML += ele;
-    }
+	const dateOfDebut = idolMetadata?.debut;
+	if (dateOfDebut) {
+		const ele = `<div class="bio-info"><span class="label">Date of debut</span><span class="value">${dateOfDebut}</span></div>`;
+		biosElement.innerHTML += ele;
+	}
 
-    const moviesCount = idolData.movies_count;
-    // console.log('[moviesCount]', moviesCount);
-    if (moviesCount) {
-        const ele = `<div class="bio-info"><span class="label">Movies count</span><span class="value">${moviesCount}</span></div>`;
-        biosElement.innerHTML += ele;
-    }
-    const measurements = idolData.measurements ? `${idolData.measurements}` + (idolData.cup ? ` (${idolData.cup})` : "") : "";
-    if (measurements) {
-        const ele = `<div class="bio-info"><span class="label">Measurements</span><span class="value">${measurements}</span></div>`;
-        biosElement.innerHTML += ele;
-    }
+	const moviesCount = idolData.movies_count;
+	// console.log('[moviesCount]', moviesCount);
+	if (moviesCount) {
+		const ele = `<div class="bio-info"><span class="label">Movies count</span><span class="value">${moviesCount}</span></div>`;
+		biosElement.innerHTML += ele;
+	}
+	const measurements = idolData.measurements ? `${idolData.measurements}` + (idolData.cup ? ` (${idolData.cup})` : "") : "";
+	if (measurements) {
+		const ele = `<div class="bio-info"><span class="label">Measurements</span><span class="value">${measurements}</span></div>`;
+		biosElement.innerHTML += ele;
+	}
 
-    // name
-    let name = dashToTitleCase(idolData.name);
-    if (idolData.jp) {
-        name += ` (${idolData.jp})`;
-    }
-    html.querySelector("#idolName").innerHTML = name;
+	// name
+	let name = dashToTitleCase(idolData.name);
+	if (idolData.jp) {
+		name += ` (${idolData.jp})`;
+	}
+	html.querySelector("#idolName").innerHTML = name;
 
-    // flag
-    html.querySelector("img[class='nation-flag']").src = "https://www.countryflags.com/wp-content/uploads/japan-flag-png-large.png";
+	// flag
+	html.querySelector("img[class='nation-flag']").src = "https://www.countryflags.com/wp-content/uploads/japan-flag-png-large.png";
 
-    // tags
-    const tags = idolMetadata?.tags ? idolMetadata.tags.split("|") : [];
-    const tagsElement = html.querySelector("div[class='tags']");
-    for (const tag of tags) {
-        if (tag.includes("age_group") || tag.includes("body_type")) {
-            const tagVal = dashToTitleCase(tag.split(":")[1]);
-            const tagElement = `<span class="tag">${tagVal}</span>`;
-            tagsElement.innerHTML += tagElement;
-        }
-    }
+	// tags
+	const tags = idolMetadata?.tags ? idolMetadata.tags.split("|") : [];
+	const tagsElement = html.querySelector("div[class='tags']");
+	for (const tag of tags) {
+		if (tag.includes("age_group") || tag.includes("body_type")) {
+			const tagVal = dashToTitleCase(tag.split(":")[1]);
+			const tagElement = `<span class="tag">${tagVal}</span>`;
+			tagsElement.innerHTML += tagElement;
+		}
+	}
 
-    const note = idolData.note;
-    if (note) {
-        const eleTemplate = `
+	const note = idolData.note;
+	if (note) {
+		const eleTemplate = `
             <span id="tag-note" class="tag tag-icon">
                 <svg width="15px" height="15px" viewBox="0 0 24 24">
                     <g id="SVGRepo_iconCarrier">
@@ -439,12 +442,12 @@ function renderIdolHTMLTemplate(idolData, moviesData) {
                 </svg>
                 <div id="tag-note-val">${note}</div>
             </span>`;
-        html.querySelector("div[class='tags']").innerHTML += eleTemplate;
-    }
+		html.querySelector("div[class='tags']").innerHTML += eleTemplate;
+	}
 
-    const fav = idolData.favorite;
-    if (fav) {
-        const eleTemplate = `
+	const fav = idolData.favorite;
+	if (fav) {
+		const eleTemplate = `
             <span id="tag-fav" class="tag tag-icon">
                 <svg fill="#ff0000" height="15px" width="15px" viewBox="0 0 512 512">
                     <g id="SVGRepo_iconCarrier">
@@ -454,220 +457,220 @@ function renderIdolHTMLTemplate(idolData, moviesData) {
                 </svg>
                 <div id="tag-fav-val">${fav}</div>
             </span>`;
-        html.querySelector("div[class='tags']").innerHTML += eleTemplate;
-    }
+		html.querySelector("div[class='tags']").innerHTML += eleTemplate;
+	}
 
-    const jjgirlData = idolMetadata?.jjGirlImg;
-    if (jjgirlData) {
-        const { imageIndex, folderIndex } = jjgirlData;
-        const total = ((parseInt(folderIndex) - 1) * 12) + parseInt(imageIndex);
+	const jjgirlData = idolMetadata?.jjGirlImg;
+	if (jjgirlData) {
+		const { imageIndex, folderIndex } = jjgirlData;
+		const total = ((parseInt(folderIndex) - 1) * 12) + parseInt(imageIndex);
 
-        const eleTemplate = `
+		const eleTemplate = `
             <span id="tag-note" class="tag tag-icon">
                 <img style="height: 25px; margin-right: 5px;" src="https://jjgirls.com/favicon.ico" />
                 <div id="tag-note-val">${total}</div>
             </span>`;
-        html.querySelector("div[class='tags']").innerHTML += eleTemplate;
-    }
+		html.querySelector("div[class='tags']").innerHTML += eleTemplate;
+	}
 
-    // links
-    const javdatabaseLink = `
+	// links
+	const javdatabaseLink = `
         <nav class="links" aria-label="Links">
             <a class="link" href="https://www.javdatabase.com/idols/${idolData.name}/">
                 <span class="dot"></span>
                 <span>JAV Database</span>
             </a>
         </nav>`;
-    html.querySelector("div[class='links-section']").innerHTML += javdatabaseLink;
+	html.querySelector("div[class='links-section']").innerHTML += javdatabaseLink;
 
-    if (jjgirlData) {
-        const jjgirlsLink = `
+	if (jjgirlData) {
+		const jjgirlsLink = `
             <nav class="links" aria-label="Links">
                 <a class="link" href="https://jjgirls.com/japanese/${idolData.name}/1/">
                     <span class="dot"></span>
                     <span>JJGirls</span>
                 </a>
             </nav>`;
-        html.querySelector("div[class='links-section']").innerHTML += jjgirlsLink;
+		html.querySelector("div[class='links-section']").innerHTML += jjgirlsLink;
 
-        const jjgilrsLinkIcon = `<img style="height: 25px; margin-right: 5px;" src="https://jjgirls.com/favicon.ico" />`;
-        html.querySelector("p[class='source-links']").innerHTML += jjgilrsLinkIcon;
-    }
+		const jjgilrsLinkIcon = `<img style="height: 25px; margin-right: 5px;" src="https://jjgirls.com/favicon.ico" />`;
+		html.querySelector("p[class='source-links']").innerHTML += jjgilrsLinkIcon;
+	}
 
-    const javherName = idolMetadata?.javherQueryName;
-    if (javherName) {
-        const javherNameLinkIcon = `<img style="height: 25px; margin-right: 5px;" src="https://javher.com/favicon.ico" />`;
-        html.querySelector("p[class='source-links']").innerHTML += javherNameLinkIcon;
-    }
+	const javherName = idolMetadata?.javherQueryName;
+	if (javherName) {
+		const javherNameLinkIcon = `<img style="height: 25px; margin-right: 5px;" src="https://javher.com/favicon.ico" />`;
+		html.querySelector("p[class='source-links']").innerHTML += javherNameLinkIcon;
+	}
 
-    // movie thumbs / jjgirl images
-    let movieDisplayCount = 1;
-    const shuffledMoviesData = shuffleArray(moviesData);
-    if (moviesData.length > 0) {
-        for (const movie of shuffledMoviesData) {
-            if (movieDisplayCount > 8) break;
-            const imgHtmlString = `<img class="movie-thumbs" src="${movie.thumbs_short}" />`
-            html.querySelector("div[class='gallery']").innerHTML += imgHtmlString;
-            movieDisplayCount++;
-        }
-    } else if (jjgirlData) {
-        console.log('[jjgirlData]', jjgirlData, idolMetadata);
-        const BASE_IMAGE_TEMPLATE = 'https://jjgirls.com/japanese/#NAME#/#FOLDER#/#NAME#-#INDEX#.jpg';
-        const imgUrls = [];
-        for (let i = 1; i <= 2; i++) {
-            const randFolderIdx = generateRandomNumber(1, parseInt(jjgirlData.folderIndex));
-            for (let j = 1; j <= 8; j++) {
-                imgUrls.push(BASE_IMAGE_TEMPLATE.replaceAll("#NAME#", idolMetadata.jjGirlQueryName).replace("#FOLDER#", randFolderIdx).replace("#INDEX#", j));
-            }
-        }
-        for (const imgUrl of imgUrls) {
-            const imgHtmlString = `<img class="movie-thumbs" src="${imgUrl}" />`
-            html.querySelector("div[class='gallery']").innerHTML += imgHtmlString;
-        }
-    }
+	// movie thumbs / jjgirl images
+	let movieDisplayCount = 1;
+	const shuffledMoviesData = shuffleArray(moviesData);
+	if (moviesData.length > 0) {
+		for (const movie of shuffledMoviesData) {
+			if (movieDisplayCount > 8) break;
+			const imgHtmlString = `<img class="movie-thumbs" src="${movie.thumbs_short}" />`
+			html.querySelector("div[class='gallery']").innerHTML += imgHtmlString;
+			movieDisplayCount++;
+		}
+	} else if (jjgirlData) {
+		console.log('[jjgirlData]', jjgirlData, idolMetadata);
+		const BASE_IMAGE_TEMPLATE = 'https://jjgirls.com/japanese/#NAME#/#FOLDER#/#NAME#-#INDEX#.jpg';
+		const imgUrls = [];
+		for (let i = 1; i <= 2; i++) {
+			const randFolderIdx = generateRandomNumber(1, parseInt(jjgirlData.folderIndex));
+			for (let j = 1; j <= 8; j++) {
+				imgUrls.push(BASE_IMAGE_TEMPLATE.replaceAll("#NAME#", idolMetadata.jjGirlQueryName).replace("#FOLDER#", randFolderIdx).replace("#INDEX#", j));
+			}
+		}
+		for (const imgUrl of imgUrls) {
+			const imgHtmlString = `<img class="movie-thumbs" src="${imgUrl}" />`
+			html.querySelector("div[class='gallery']").innerHTML += imgHtmlString;
+		}
+	}
 
-    return html.toString();
+	return html.toString();
 }
 
 function render404Page() {
-    const htmlTemplateString = fs.readFileSync("./assets/TEMPLATE_404.html", "utf-8");
-    return htmlTemplateString
+	const htmlTemplateString = fs.readFileSync("./assets/TEMPLATE_404.html", "utf-8");
+	return htmlTemplateString
 }
 
 function shuffleArray(array) {
-    for (let i = array.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [array[i], array[j]] = [array[j], array[i]];
-    }
-    return array;
+	for (let i = array.length - 1; i > 0; i--) {
+		const j = Math.floor(Math.random() * (i + 1));
+		[array[i], array[j]] = [array[j], array[i]];
+	}
+	return array;
 }
 
 function generateRandomNumber(min, max) {
-    // min and max included
-    return Math.floor(Math.random() * (max - min + 1) + min);
+	// min and max included
+	return Math.floor(Math.random() * (max - min + 1) + min);
 };
 
 function generateHashedFromString(str) {
-    return crypto.createHash('md5').update(str).digest('hex');
+	return crypto.createHash('md5').update(str).digest('hex');
 }
 
 function classifyThumbsType(url) {
-    if (url.startsWith("https://pics.r18.com/") || url.startsWith("https://pics.dmm.co.jp/")) {
-        if (!url) throw new Error("Invalid thumb url");
-        const imageSegs = url.toLowerCase().split("/");
-        const imgName = imageSegs.pop();
-        const [seg1, seg2] = imgName.split("-");
+	if (url.startsWith("https://pics.r18.com/") || url.startsWith("https://pics.dmm.co.jp/")) {
+		if (!url) throw new Error("Invalid thumb url");
+		const imageSegs = url.toLowerCase().split("/");
+		const imgName = imageSegs.pop();
+		const [seg1, seg2] = imgName.split("-");
 
-        const names = {};
-        const isImgTypeSpeficied = ["jp", "js"].includes(seg1.slice(-2));
-        const preImgName = isImgTypeSpeficied ? seg1.substring(0, seg1.length - 2) : seg1;
-        names.full = preImgName + "jp-" + seg2;
-        names.cover = [preImgName + "-" + seg2, preImgName + "js-" + seg2];
+		const names = {};
+		const isImgTypeSpeficied = ["jp", "js"].includes(seg1.slice(-2));
+		const preImgName = isImgTypeSpeficied ? seg1.substring(0, seg1.length - 2) : seg1;
+		names.full = preImgName + "jp-" + seg2;
+		names.cover = [preImgName + "-" + seg2, preImgName + "js-" + seg2];
 
-        return {
-            full: [...imageSegs, names.full].join("/").replace("https://pics.r18.com/", "https://pics.dmm.co.jp/"),
-            cover: names.cover.map(c => [...imageSegs, c].join("/").replace("https://pics.r18.com/", "https://pics.dmm.co.jp/")),
-        }
+		return {
+			full: [...imageSegs, names.full].join("/").replace("https://pics.r18.com/", "https://pics.dmm.co.jp/"),
+			cover: names.cover.map(c => [...imageSegs, c].join("/").replace("https://pics.r18.com/", "https://pics.dmm.co.jp/")),
+		}
 
 
-        // const isFullSpecified = seg1.slice(-2) === "jp";
-        // const isSmallSpecified = seg1.slice(-2) === "js";
+		// const isFullSpecified = seg1.slice(-2) === "jp";
+		// const isSmallSpecified = seg1.slice(-2) === "js";
 
-        // const names = {};
-        // if (isFullSpecified) {
-        //     const preImgName = seg1.substring(0, seg1.length - 2);
-        //     names.full = preImgName + "jp-" + seg2;
-        //     names.cover = preImgName + "-" + seg2;
-        // } else if (isSmallSpecified) {
-        //     const preImgName = seg1.substring(0, seg1.length - 2);
-        //     names.full = preImgName + "jp-" + seg2;
-        //     names.cover = preImgName + "js-" + seg2;
-        // } else {
-        //     const preImgName = seg1;
-        //     names.full = preImgName + "jp-" + seg2;
-        //     names.cover = preImgName + "-" + seg2;
-        // }
-        // return {
-        //     full: [...imageSegs, names.full].join("/").replace("https://pics.r18.com/", "https://pics.dmm.co.jp/"),
-        //     cover: [...imageSegs, names.cover].join("/").replace("https://pics.r18.com/", "https://pics.dmm.co.jp/"),
-        // }
-    }
+		// const names = {};
+		// if (isFullSpecified) {
+		//     const preImgName = seg1.substring(0, seg1.length - 2);
+		//     names.full = preImgName + "jp-" + seg2;
+		//     names.cover = preImgName + "-" + seg2;
+		// } else if (isSmallSpecified) {
+		//     const preImgName = seg1.substring(0, seg1.length - 2);
+		//     names.full = preImgName + "jp-" + seg2;
+		//     names.cover = preImgName + "js-" + seg2;
+		// } else {
+		//     const preImgName = seg1;
+		//     names.full = preImgName + "jp-" + seg2;
+		//     names.cover = preImgName + "-" + seg2;
+		// }
+		// return {
+		//     full: [...imageSegs, names.full].join("/").replace("https://pics.r18.com/", "https://pics.dmm.co.jp/"),
+		//     cover: [...imageSegs, names.cover].join("/").replace("https://pics.r18.com/", "https://pics.dmm.co.jp/"),
+		// }
+	}
 
-    if (url.startsWith("https://image.mgstage.com/")) {
-        return {
-            full: url.replace("_t1_", "_e_"),
-            cover: [url],
-        }
-    }
+	if (url.startsWith("https://image.mgstage.com/")) {
+		return {
+			full: url.replace("_t1_", "_e_"),
+			cover: [url],
+		}
+	}
 }
 
 function classifyPosterType(url) {
-    if (url.startsWith("https://pics.r18.com/") || url.startsWith("https://pics.dmm.co.jp/")) {
-        if (!url) throw new Error("Invalid poster url");
-        const imageSegs = url.toLowerCase().split("/");
-        const imgName = imageSegs.pop();
-        const [seg1, seg2] = imgName.split(".");
+	if (url.startsWith("https://pics.r18.com/") || url.startsWith("https://pics.dmm.co.jp/")) {
+		if (!url) throw new Error("Invalid poster url");
+		const imageSegs = url.toLowerCase().split("/");
+		const imgName = imageSegs.pop();
+		const [seg1, seg2] = imgName.split(".");
 
-        const names = {};
-        const isImgTypeSpeficied = ["jp", "js"].includes(seg1.slice(-2));
-        if (isImgTypeSpeficied) {
-            const preImgName = isImgTypeSpeficied ? seg1.substring(0, seg1.length - 2) : seg1;
-            names.full = preImgName + "jp." + seg2;
-            names.cover = [preImgName + "." + seg2, preImgName + "js." + seg2];
-        } else {
-            const preImgName = seg1.substring(0, seg1.length - 2);
-            names.full = preImgName + "pl." + seg2;
-            names.cover = [preImgName + "ps." + seg2];
-        }
+		const names = {};
+		const isImgTypeSpeficied = ["jp", "js"].includes(seg1.slice(-2));
+		if (isImgTypeSpeficied) {
+			const preImgName = isImgTypeSpeficied ? seg1.substring(0, seg1.length - 2) : seg1;
+			names.full = preImgName + "jp." + seg2;
+			names.cover = [preImgName + "." + seg2, preImgName + "js." + seg2];
+		} else {
+			const preImgName = seg1.substring(0, seg1.length - 2);
+			names.full = preImgName + "pl." + seg2;
+			names.cover = [preImgName + "ps." + seg2];
+		}
 
-        // const isFullSpecified = seg1.slice(-2) === "jp";
-        // const names = {};
-        // if (isFullSpecified) {
-        //     const preImgName = seg1.substring(0, seg1.length - 2);
-        //     names.full = preImgName + "jp." + seg2;
-        //     names.cover = preImgName + "." + seg2;
-        // } else {
-        //     const preImgName = seg1.substring(0, seg1.length - 2);
-        //     names.full = preImgName + "jp." + seg2;
-        //     names.cover = preImgName + "js." + seg2;
-        // }
+		// const isFullSpecified = seg1.slice(-2) === "jp";
+		// const names = {};
+		// if (isFullSpecified) {
+		//     const preImgName = seg1.substring(0, seg1.length - 2);
+		//     names.full = preImgName + "jp." + seg2;
+		//     names.cover = preImgName + "." + seg2;
+		// } else {
+		//     const preImgName = seg1.substring(0, seg1.length - 2);
+		//     names.full = preImgName + "jp." + seg2;
+		//     names.cover = preImgName + "js." + seg2;
+		// }
 
-        return {
-            full: [...imageSegs, names.full].join("/"),
-            cover: names.cover.map(c => [...imageSegs, c].join("/")),
-        }
-    }
+		return {
+			full: [...imageSegs, names.full].join("/"),
+			cover: names.cover.map(c => [...imageSegs, c].join("/")),
+		}
+	}
 
-    if (url.startsWith("https://image.mgstage.com/")) {
-        return {
-            full: url.replace("_t1_", "_e_"),
-            cover: [url],
-        }
-    }
+	if (url.startsWith("https://image.mgstage.com/")) {
+		return {
+			full: url.replace("_t1_", "_e_"),
+			cover: [url],
+		}
+	}
 }
 
 module.exports = {
-    secondsToHms,
-    sleep,
-    createPropertiesCREATEColumns,
-    createPropertiesUPDATEColumns,
-    createPropertiesValues,
-    createRecordArrayByPropertyName,
-    downloadImageByUrl,
-    downloadWithRetry,
-    downloadMovieByUrl,
-    fetchWithRetry,
-    parseIdolName,
-    treatMovieCode,
-    toMime,
-    generateRandomNumber,
-    renderIdolHTMLTemplate,
-    renderMovieHTMLTemplate,
-    render404Page,
-    shuffleArray,
-    generateHashedFromString,
-    inverseName,
-    reverseIdolName,
-    classifyThumbsType,
-    classifyPosterType
+	secondsToHms,
+	sleep,
+	createPropertiesCREATEColumns,
+	createPropertiesUPDATEColumns,
+	createPropertiesValues,
+	createRecordArrayByPropertyName,
+	downloadImageByUrl,
+	downloadWithRetry,
+	downloadMovieByUrl,
+	fetchWithRetry,
+	parseIdolName,
+	treatMovieCode,
+	toMime,
+	generateRandomNumber,
+	renderIdolHTMLTemplate,
+	renderMovieHTMLTemplate,
+	render404Page,
+	shuffleArray,
+	generateHashedFromString,
+	inverseName,
+	reverseIdolName,
+	classifyThumbsType,
+	classifyPosterType
 }

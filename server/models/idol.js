@@ -84,5 +84,5 @@ async function getIdolsPaginated(options = {}) {
 
 module.exports = {
 	// …your existing exports
-	getIdolsPaginated,
+	// getIdolsPaginated,
 };
