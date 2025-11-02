@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 | Lost in the Shadows</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap');
+
+        body {
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-family: 'Poppins', sans-serif;
+            background: radial-gradient(circle at 30% 50%, #0a0a0a 0%, #000000 70%);
+            color: #ccc;
+            overflow-x: hidden;
+        }
+
+        .illustration {
+            width: 160px;
+            height: 160px;
+            margin-top: 60px;
+            background: url('https://cdn-icons-png.flaticon.com/512/7486/7486809.png') no-repeat center;
+            background-size: contain;
+            opacity: 0.9;
+            filter: drop-shadow(0 0 12px rgba(150, 0, 255, 0.4));
+            animation: fadeIn 2s ease;
+        }
+
+        h1 {
+            font-size: 3em;
+            font-weight: 700;
+            color: #e0e0e0;
+            text-shadow: 0 0 15px #9400ff, 0 0 30px #7a00ff;
+            animation: fadeInDown 1s ease;
+            letter-spacing: 1.5px;
+            margin: 10px 0 5px 0;
+        }
+
+        /* Mô tả */
+        p {
+            max-width: 90%;
+            font-size: 0.95em;
+            color: #aaa;
+            text-align: center;
+            line-height: 1.5;
+            animation: fadeIn 1.5s ease;
+        }
+
+        a {
+            color: #b57fff;
+            text-decoration: none;
+            border-bottom: 1px solid #b57fff;
+            transition: 0.3s;
+        }
+
+        a:hover {
+            color: #fff;
+            border-color: #fff;
+        }
+
+        #countdown {
+            color: #ff66ff;
+            font-weight: bold;
+            text-shadow: 0 0 8px #ff33ff;
+        }
+
+        #rss-feed {
+            width: 85%;
+            max-width: 620px;
+            margin-top: 25px;
+            animation: fadeInUp 2s ease;
+        }
+
+        .rss-item {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 10px 14px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            backdrop-filter: blur(5px);
+            transition: transform 0.25s ease, box-shadow 0.25s ease;
+            animation: fadeItem 0.8s ease;
+        }
+
+        .rss-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 12px rgba(180, 100, 255, 0.3);
+        }
+
+        .rss-item h2 a {
+            color: #dcb6ff;
+            text-shadow: 0 0 3px #6b3cff;
+            font-size: 0.9em;
+            font-weight: 500;
+        }
+
+        .rss-item p {
+            font-size: 0.8em;
+            color: #888;
+            margin-top: 4px;
+        }
+
+        .particles {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            top: 0;
+            left: 0;
+            z-index: -1;
+        }
+
+        .particle {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 50%;
+            animation: float 10s infinite ease-in-out;
+        }
+
+        @keyframes float {
+            0% {
+                transform: translateY(0) scale(1);
+                opacity: 0.8;
+            }
+
+            50% {
+                transform: translateY(-80px) scale(1.1);
+                opacity: 0.5;
+            }
+
+            100% {
+                transform: translateY(0) scale(1);
+                opacity: 0.8;
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(25px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-25px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeItem {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 2.4em;
+            }
+
+            p {
+                font-size: 0.9em;
+            }
+
+            .illustration {
+                width: 120px;
+                height: 120px;
+            }
+
+            .rss-item {
+                padding: 8px 10px;
+            }
+        }
+    </style>
+
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-CYVVX8LXNF"
+        type="06020d5b4a27b119527e6d9d-text/javascript"></script>
+    <script type="06020d5b4a27b119527e6d9d-text/javascript">
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-CYVVX8LXNF');
+</script>
+
+</head>
+
+<body>
+    <div class="particles" id="particles"></div>
+
+    <div class="illustration"></div>
+
+    <h1>404</h1>
+    <p>The page you seek has vanished into the void.<br>
+        Redirecting to <a href="https://misskon.com/">Misskon</a> in <span id="countdown">15</span> seconds.</p>
+
+    <p>Perhaps explore the latest whispers:</p>
+    <div id="rss-feed"></div>
+
+    <script type="06020d5b4a27b119527e6d9d-text/javascript">
+let count = 15;
+const element = document.getElementById("countdown");
+const interval = setInterval(() => {
+    count--;
+    element.textContent = count;
+    if (count === 0) {
+        clearInterval(interval);
+        window.location.href = "https://misskon.com/";
+    }
+}, 1000);
+
+function loadRSS(url) {
+    const xmlhttp = new XMLHttpRequest();
+    xmlhttp.onreadystatechange = function() {
+        if (this.readyState == 4 && this.status == 200) {
+            const xml = xmlhttp.responseXML;
+            const items = xml.getElementsByTagName("item");
+            let output = "";
+            for (let i = 0; i < Math.min(items.length, 10); i++) {
+                const title = items[i].getElementsByTagName("title")[0].textContent;
+                const link = items[i].getElementsByTagName("link")[0].textContent;
+                const desc = items[i].getElementsByTagName("description")[0].textContent;
+                output += `<div class='rss-item' style='animation-delay:${i*0.15}s'>
+                    <h2><a href='${link}' target='_blank'>${title}</a></h2>
+                    <p>${desc}</p>
+                </div>`;
+            }
+            document.getElementById("rss-feed").innerHTML = output;
+        }
+    };
+    xmlhttp.open("GET", url, true);
+    xmlhttp.send();
+}
+loadRSS('https://misskon.com/feed');
+
+const container = document.getElementById("particles");
+for (let i = 0; i < 12; i++) {
+    const particle = document.createElement("div");
+    const size = Math.random() * 5 + 2;
+    particle.classList.add("particle");
+    particle.style.width = size + "px";
+    particle.style.height = size + "px";
+    particle.style.left = Math.random() * 100 + "%";
+    particle.style.top = Math.random() * 100 + "%";
+    particle.style.animationDuration = 8 + Math.random() * 5 + "s";
+    particle.style.animationDelay = Math.random() * 4 + "s";
+    container.appendChild(particle);
+}
+</script>
+    <script src="/cdn-cgi/scripts/7d0fa10a/cloudflare-static/rocket-loader.min.js"
+        data-cf-settings="06020d5b4a27b119527e6d9d-|49" defer></script>
+</body>
+
+</html>

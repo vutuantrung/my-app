@@ -3,7 +3,7 @@ const { searchMovie } = require("./movie.controller");
 
 async function searchByIdentify(req, res) {
     try {
-        const { identify, url, updateRecord, reuseSavedFile, displayType } = req.body;
+        const { identify } = req.body;
         const isMovie = /\d/.test(identify);
 
         if (isMovie) {
