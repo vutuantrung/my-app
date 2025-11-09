@@ -13,6 +13,7 @@ import ScenesLightboxScreen from './screens/ScenesLightboxScreen';
 import DashboardScreen from './screens/DashboardScreen';
 import FilmScreen from './screens/FilmScreen';
 import FilmDetailScreen from './screens/FilmDetailScreen';
+import FilmSceneViewerScreen from './screens/FilmSceneViewerScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -64,6 +65,11 @@ export default function App() {
 						name="ActressFilm"
 						component={ActressFilmScreen}
 						options={{ title: 'Actress • Films', headerStyle: { backgroundColor: '#0f1115' }, headerTintColor: '#e7ecf3' }}
+					/>
+					<Stack.Screen
+						name="FilmSceneViewer"
+						component={FilmSceneViewerScreen}
+						options={{ headerShown: false }}
 					/>
 				</Stack.Navigator>
 			</NavigationContainer>

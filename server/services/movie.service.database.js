@@ -195,7 +195,7 @@ async function updateMovieById(id, updateData /* Map */) {
 		});
 	});
 }
-
+//AAJB-112
 async function updateMovieByCode(code, updateData /* Map */) {
 	const { setString, valuesArr } = createPropertiesUPDATEColumns(updateData);
 	const sql = `UPDATE movie SET ${setString} WHERE code = ?`;
@@ -206,7 +206,7 @@ async function updateMovieByCode(code, updateData /* Map */) {
 					console.log('[updateMovieByCode]', `Update failed: ${err.message}`)
 					resolve(null);
 				}
-				console.log('[updateMovieByCode]', `Update successfully: ${code}`)
+				// console.log('[updateMovieByCode]', `Update successfully: ${code}`)
 				resolve(code);
 			}
 		);
@@ -258,3 +258,9 @@ module.exports = {
 	searchMovieByFavorite,
 	updateMovieByContentId
 }
+
+// searchMovieByContentId("mida00277").then(result => {
+// 	console.log(result);
+// }).catch(err => {
+// 	console.error(err);
+// });

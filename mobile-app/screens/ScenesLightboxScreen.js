@@ -5,6 +5,7 @@ import {
 	Pressable, Animated, StatusBar, Image,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { makeid } from '../helper';
 
 const { width, height } = Dimensions.get('window');
 const DOUBLE_TAP_DELAY = 300;
@@ -97,7 +98,7 @@ export default function ScenesLightboxScreen() {
 			<FlatList
 				ref={listRef}
 				data={scenes}
-				keyExtractor={(s) => s.id}
+				keyExtractor={(s) => makeid(10)}
 				renderItem={renderItem}
 				horizontal
 				pagingEnabled
