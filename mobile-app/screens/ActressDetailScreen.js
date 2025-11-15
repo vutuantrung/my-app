@@ -23,7 +23,7 @@ const FILM_GAP = 10;
 const FILM_CARD_W = 140;
 
 const BASE_URL = 'http://192.168.1.77:3123';
-const SEARCH_URL = BASE_URL + '/api/idol/search'; // ← your API
+const SEARCH_URL = BASE_URL + '/api/idol/searchExact'; // ← your API
 
 /* ----------- helpers: parse & map server record to UI model ----------- */
 function parseMeta(input) {
@@ -158,15 +158,17 @@ export default function ActressDetailScreen() {
 					"reuseSavedFile": true,
 					"displayType": "json"
 				}; // <-- adjust to your API contract
-				const res = await fetch(SEARCH_URL, {
-					method: 'POST',
+				const url = SEARCH_URL + "?name=" + encodeURIComponent(actressName);
+				const res = await fetch(url, {
+					method: 'GET',
 					headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-					body: JSON.stringify(body),
-					signal: controller.signal,
+					// body: JSON.stringify(body),
+					// signal: controller.signal,
 				});
 				if (!res.ok) throw new Error(`HTTP ${res.status}`);
 				const actressData = await res.json(); // single object per your sample
-				// console.log('[actressData]', actressData)
+				// const actressData = jsonData.data[0];
+				console.log('[actressData]', actressData)
 				if (!actressData) throw new Error('Not found');
 
 				const actress = mapServerToActress(actressData);

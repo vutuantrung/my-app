@@ -1,14 +1,14 @@
 const proxyIps = `
 142.111.48.253:7030:skjpdwdk:wbf5e31thcpw
 31.59.20.176:6754:skjpdwdk:wbf5e31thcpw
-38.170.176.177:5572:skjpdwdk:wbf5e31thcpw
+23.95.150.145:6114:skjpdwdk:wbf5e31thcpw
 198.23.239.134:6540:skjpdwdk:wbf5e31thcpw
 45.38.107.97:6014:skjpdwdk:wbf5e31thcpw
 107.172.163.27:6543:skjpdwdk:wbf5e31thcpw
+198.105.121.200:6462:skjpdwdk:wbf5e31thcpw
 64.137.96.74:6641:skjpdwdk:wbf5e31thcpw
 216.10.27.159:6837:skjpdwdk:wbf5e31thcpw
 142.111.67.146:5611:skjpdwdk:wbf5e31thcpw
-142.147.128.93:6593:skjpdwdk:wbf5e31thcpw
 `;
 // proxy-rotator.js
 // Install dependencies: npm i axios http-proxy-agent https-proxy-agent
@@ -22,75 +22,75 @@ const { sleep } = require("../helpers");
  * Converts "ip:port:username:password" to a proxy config object.
  */
 function parseProxyString(s) {
-    const parts = String(s).trim().split(":");
-    if (parts.length !== 4) {
-        throw new Error(`Invalid proxy format: "${s}". Expected ip:port:username:password`);
-    }
+	const parts = String(s).trim().split(":");
+	if (parts.length !== 4) {
+		throw new Error(`Invalid proxy format: "${s}". Expected ip:port:username:password`);
+	}
 
-    const [host, port, username, password] = parts;
-    const auth = encodeURIComponent(username) + ":" + encodeURIComponent(password);
+	const [host, port, username, password] = parts;
+	const auth = encodeURIComponent(username) + ":" + encodeURIComponent(password);
 
-    return {
-        host,
-        port: Number(port),
-        username,
-        password,
-        url: `http://${auth}@${host}:${port}` // Works for both HTTP and HTTPS
-    };
+	return {
+		host,
+		port: Number(port),
+		username,
+		password,
+		url: `http://${auth}@${host}:${port}` // Works for both HTTP and HTTPS
+	};
 }
 
 // https://javher.com/api/video/watch-ofje00525-1752807600000
 
 class ProxyRotator {
-    /**
-     * @param {string[]} proxyList - array of "ip:port:username:password"
-     * @param {"round-robin"|"random"} strategy
-     */
-    constructor(strategy = "round-robin") {
-        this.proxies = proxyIps.split("\n").filter(Boolean).map(parseProxyString);
-        this.strategy = strategy;
-        this._i = 0;
-    }
+	/**
+	 * @param {string[]} proxyList - array of "ip:port:username:password"
+	 * @param {"round-robin"|"random"} strategy
+	 */
+	constructor(strategy = "round-robin") {
+		this.proxies = proxyIps.split("\n").filter(Boolean).map(parseProxyString);
+		this.strategy = strategy;
+		this._i = 0;
+	}
 
-    /** Get the next proxy */
-    getProxy() {
-        if (this.strategy === "random") {
-            const idx = Math.floor(Math.random() * this.proxies.length);
-            return this.proxies[idx];
-        }
-        // round-robin
-        const proxy = this.proxies[this._i];
-        this._i = (this._i + 1) % this.proxies.length;
-        return proxy;
-    }
+	/** Get the next proxy */
+	getProxy() {
+		if (this.strategy === "random") {
+			const idx = Math.floor(Math.random() * this.proxies.length);
+			return this.proxies[idx];
+		}
+		// round-robin
+		const proxy = this.proxies[this._i];
+		this._i = (this._i + 1) % this.proxies.length;
+		return proxy;
+	}
 
-    /**
-     * Create an axios instance configured to use the next proxy.
-     */
-    axiosForNextProxy(opts = {}) {
-        const proxy = this.getProxy();
+	/**
+	 * Create an axios instance configured to use the next proxy.
+	 */
+	axiosForNextProxy(opts = {}) {
+		const proxy = this.getProxy();
 
-        // Use the right agent depending on protocol
-        const httpAgent = new HttpProxyAgent(proxy.url);
-        const httpsAgent = new HttpsProxyAgent(proxy.url);
+		// Use the right agent depending on protocol
+		const httpAgent = new HttpProxyAgent(proxy.url);
+		const httpsAgent = new HttpsProxyAgent(proxy.url);
 
-        const axiosConfig = {
-            proxy: false, // disable axios default proxy config
-            httpAgent,
-            httpsAgent,
-            timeout: opts.timeout ?? 15000,
-            headers: opts.headers
-        }
+		const axiosConfig = {
+			proxy: false, // disable axios default proxy config
+			httpAgent,
+			httpsAgent,
+			timeout: opts.timeout ?? 15000,
+			headers: opts.headers
+		}
 
-        if (opts.responseType) {
-            axiosConfig.responseType = opts.responseType;
-        }
+		if (opts.responseType) {
+			axiosConfig.responseType = opts.responseType;
+		}
 
-        const instance = axios.create(axiosConfig);
+		const instance = axios.create(axiosConfig);
 
-        instance._proxy = proxy; // expose the chosen proxy
-        return instance;
-    }
+		instance._proxy = proxy; // expose the chosen proxy
+		return instance;
+	}
 }
 
 module.exports = ProxyRotator;

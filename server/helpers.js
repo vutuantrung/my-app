@@ -69,7 +69,7 @@ async function downloadImageByUrl(url, destFolder, fileName = "", axiosClient = 
 		}
 
 		const headers = {
-			'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
+			'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36',
 			'Accept': 'image/webp,image/apng,image/*,*/*;q=0.8',
 			'Referer': 'https://google.com', // sometimes required
 		};
@@ -125,6 +125,7 @@ async function downloadImageByUrl(url, destFolder, fileName = "", axiosClient = 
 
 		return true;
 	} catch (err) {
+		console.log(err)
 		console.error('❌ Download failed:', url);
 		return false;
 	}
@@ -207,6 +208,10 @@ async function fetchWithRetry(url, headers, proxyService, retryTimes) {
 			fetchedData = res.data;
 			break;
 		} catch (error) {
+			// for misskon exception
+			if (error.response.data.includes("404 | Lost in the Shadows")) {
+				return error.response.data;
+			}
 			if (error.message.includes("code 404")) {
 				console.log("Page 404!");
 				break;

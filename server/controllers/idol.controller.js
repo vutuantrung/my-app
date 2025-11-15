@@ -11,7 +11,6 @@ const { crawlIdolFromJJGirl } = require("../features/jjgirls/jjgirls.utils");
 
 async function searchIdol(req, res) {
 	try {
-		const TESTING = true;// This will return immediately after detect idol data is saved
 		console.log('[req.body]', req.body);
 		const { name, updateRecord, reuseSavedFile, displayType } = req.body;
 		let [name_jdb, name_jher, name_jjg] = name.split(",");
@@ -182,6 +181,8 @@ async function searchIdol(req, res) {
 			await idolMovieDbServices.createIdolMovies(idolMovies);
 		}
 
+		console.log('[idol]', idol)
+
 		let resultSendback = displayType === "json"
 			? JSON.stringify(idol)
 			: renderIdolHTMLTemplate(idol, movies);
@@ -212,9 +213,6 @@ async function getPagination(req, res) {
 			order,
 		});
 
-		console.log('[result]', result)
-		console.log("Client fetched pagination page", page)
-
 		return res.json(result);
 	} catch (err) {
 		console.error("[listIdolsPaginated]", err);
@@ -222,9 +220,55 @@ async function getPagination(req, res) {
 	}
 }
 
-async function searchIdolByNameLike(name) {
+async function searchIdolsByNameLike(req, res) {
+	const { name } = req.query;
 	const result = await idolDbServices.searchIdolsByNameLike(name);
 	return res.json(result);
+}
+
+async function searchIdolByExactName(req, res) {
+	const { name } = req.query;
+	console.log('[searchIdolByExactName]', name)
+	const result = await idolDbServices.searchIdolsByName(name);
+	const idol = result.data.length > 0 ? result.data[0] : null;
+	if (idol) {
+		// 4.5 get avatar
+		const avatarDir = path.join(process.cwd(), "database", "idol-avatars");
+		if (fs.existsSync(path.join(avatarDir, `${idol.name}-avatar.jpg`)))
+			idol.avatar = `/images/idol-avatars/${idol.name}-avatar.jpg`;
+		if (fs.existsSync(path.join(avatarDir, `${idol.name}-avatar-gif.gif`)))
+			idol.avatar = `/images/idol-avatars/${idol.name}-avatar-gif.gif`;
+		if (!idol.avatar) idol.avatar = `/images/idol-avatars/anonymous.jpg`;
+
+		// 4.6 get pictures
+		const picturesDir = path.join(process.cwd(), "database", "idol-pictures");
+		for (let i = 1; i <= 10; i++) {
+			const picPath = path.join(picturesDir, `${idol.name}-${i}.webp`);
+			if (fs.existsSync(picPath)) {
+				const picUrl = `/images/idol-pictures/${idol.name}-${i}.webp`;
+				if (!idol.pictures) idol.pictures = [];
+				idol.pictures.push(picUrl);
+			}
+		}
+
+		// 4.7 get cover
+		const coverDir = path.join(process.cwd(), "database", "idol-pictures");
+		if (fs.existsSync(path.join(coverDir, `${idol.name}-0.webp`)))
+			idol.cover = `/images/idol-pictures/${idol.name}-0.webp`;
+		if (!idol.cover) idol.cover = `/images/idol-pictures/anonymous-${generateRandomNumber(0, 10)}.webp`;
+
+		// sample movies
+		const searchMoviesReq = await idolMovieDbServices.searchMovieByIdolName(idol.name);
+
+		const moviesCode = searchMoviesReq.map(e => e.movie_code);
+		const shuffledMoviesCode = shuffleArray(moviesCode.filter(e => e.includes("-"))).slice(0, 8).filter(Boolean);
+		const moviesDataReq = await movieDbServices.searchMoviesByCodes(shuffledMoviesCode.join(","));
+
+		const moviesReturn = moviesDataReq.data.map(e => ({ code: e.code, thumb: e.thumbs_short }));
+		idol.movies = moviesReturn;
+	}
+	console.log(idol)
+	return res.json(idol);
 }
 
 async function searchIdolByMyFavorite(req, res) {
@@ -239,4 +283,12 @@ async function searchIdolByMyFavorite(req, res) {
 	return res.json(idolReturn);
 }
 
-module.exports = { searchIdol, getPagination, searchIdolByMyFavorite }
+// searchIdolByExactName("ai-uehara");
+
+module.exports = {
+	searchIdol,
+	getPagination,
+	searchIdolByMyFavorite,
+	searchIdolsByNameLike,
+	searchIdolByExactName
+}

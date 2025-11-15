@@ -184,29 +184,26 @@ export default function DashboardScreen() {
 					showsHorizontalScrollIndicator={false}
 					contentContainerStyle={{ paddingHorizontal: 16 }}
 					ItemSeparatorComponent={() => <View style={{ width: 10 }} />}
-					renderItem={({ item }) => {
-						console.log('[item]', item)
-						return (
-							<Pressable
-								style={styles.cardMovie}
-								onPress={() =>
-									navigation.navigate('FilmDetail', {
-										id: item.id,
-										code: item.code,
-										contentId: item.contentId,
-									})
-								}
-							>
-								<Text style={styles.movieCode} numberOfLines={1}>
-									{item.code.toUpperCase()}
-								</Text>
-								<Image source={{ uri: item.image }} style={styles.movieImage} />
-								<Text style={styles.movieTitle} numberOfLines={1}>
-									{item.title}
-								</Text>
-							</Pressable>
-						)
-					}}
+					renderItem={({ item }) => (
+						<Pressable
+							style={styles.cardMovie}
+							onPress={() =>
+								navigation.navigate('FilmDetail', {
+									id: item.id,
+									code: item.code,
+									contentId: item.contentId,
+								})
+							}
+						>
+							<Text style={styles.movieCode} numberOfLines={1}>
+								{item.code.toUpperCase()}
+							</Text>
+							<Image source={{ uri: item.image }} style={styles.movieImage} />
+							<Text style={styles.movieTitle} numberOfLines={1}>
+								{item.title}
+							</Text>
+						</Pressable>
+					)}
 				/>
 			)}
 

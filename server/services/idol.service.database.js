@@ -42,6 +42,7 @@ async function searchIdolsByName(name) {
 
 async function searchIdolsByNameLike(name) {
 	return new Promise((resolve, reject) => {
+		console.log(name)
 		const terms = name ? name.split(',').map(n => n.trim()).filter(Boolean) : [];
 		let sqlCommand = 'SELECT * FROM idol_profile';
 		let params = [];
@@ -49,7 +50,7 @@ async function searchIdolsByNameLike(name) {
 		if (terms.length > 0) {
 			const orClause = terms.map(() => 'name LIKE ?').join(' OR ');
 			sqlCommand += ` WHERE ${orClause}`;
-			params = terms; // exact values, no wildcards
+			params = terms.map(term => `%${term}%`);
 		}
 
 		db.all(sqlCommand, params, (err, rows) => {

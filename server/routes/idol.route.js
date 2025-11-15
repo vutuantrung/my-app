@@ -1,9 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const { searchIdol, getPagination, searchIdolByMyFavorite } = require("../controllers/idol.controller");
+const { searchIdol, getPagination, searchIdolByMyFavorite, searchIdolsByNameLike, searchIdolByExactName } = require("../controllers/idol.controller");
 
 // READ ALL + optional ?name= filter
 router.get('/', getPagination);
+router.get('/search', searchIdolsByNameLike);
+router.get('/searchExact', searchIdolByExactName);
 router.get('/top', searchIdolByMyFavorite);
 
 // READ ONE

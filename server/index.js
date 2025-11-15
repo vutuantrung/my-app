@@ -50,6 +50,8 @@ const movieRoutes = require('./routes/movie.route.js');
 app.use('/api/movie', movieRoutes);
 const identifyRoutes = require('./routes/common.route.js');
 app.use('/api/identify', identifyRoutes);
+const modelProfileRoutes = require('./routes/model.route.js');
+app.use('/api/model', modelProfileRoutes);
 
 app.get('/health', (req, res) => res.json({ ok: true }));
 

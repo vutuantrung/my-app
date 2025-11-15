@@ -103,7 +103,6 @@ export default function FilmDetailScreen() {
 				if (!res.ok) {
 					throw new Error(`HTTP ${res.status}`);
 				}
-				console.log('[raw]', movieData)
 				const raw = await res.json();
 				const movieData = raw.data[0];
 
