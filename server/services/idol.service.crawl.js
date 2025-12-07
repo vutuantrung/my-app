@@ -13,8 +13,9 @@ async function crawlIdolByName({ name_jdb, name_jher, name_jjg }) {
 	let data = {};
 	{
 		const crawledFromJAVDb = await crawlIdolJAVDatabase(name_jdb);
+		const javdbQueryName = crawledFromJAVDb?.queryName ?? name_jdb.replace("_", "");
 		data = {
-			name: crawledFromJAVDb?.queryName ?? name_jdb.replace("_", ""),
+			name: javdbQueryName,
 			dob: crawledFromJAVDb?.dob,
 			measurements: crawledFromJAVDb?.measurements,
 			height: crawledFromJAVDb?.height,
@@ -39,6 +40,7 @@ async function crawlIdolByName({ name_jdb, name_jher, name_jjg }) {
 				tags: crawledFromJAVDb?.tags
 					? crawledFromJAVDb.tags.map(tag => tag.name + ":" + tag.value).join("|")
 					: "",
+				javdbQueryName: javdbQueryName
 			}
 		}
 		fs.writeFileSync("test/samples/javdb.json", JSON.stringify(crawledFromJAVDb));
@@ -78,6 +80,12 @@ async function crawlIdolByName({ name_jdb, name_jher, name_jjg }) {
 			}
 			fs.writeFileSync("test/samples/jjgirl.json", JSON.stringify(crawledFromJJGirl));
 		}
+	}
+
+	{
+		const aliasSet = new Set([data.metadata?.javdbQueryName, data.metadata?.javherQueryName, data.metadata?.jjGirlQueryName].filter(Boolean));
+		const alias = Array.from(aliasSet).join(",");
+		data.alias = alias;
 	}
 
 	const showupData = JSON.parse(JSON.stringify(data));

@@ -1,5 +1,5 @@
 // screens/ActressDetailScreen.js
-import * as React from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
 	View,
 	Text,
@@ -10,6 +10,7 @@ import {
 	FlatList,
 	Pressable,
 	Linking,
+	Animated,
 	ActivityIndicator,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -81,6 +82,7 @@ function mapServerToActress(rec) {
 	const height = parseHeight(rec?.height);
 	const rating = parseRating(rec?.note);
 	const favorites = toIntMaybe(rec?.favorite);
+	const jjgirlData = meta?.jjGirlImg || null;
 
 	return {
 		id: String(rec?.id ?? name),
@@ -106,14 +108,15 @@ function mapServerToActress(rec) {
 		country: rec?.country || '',
 		films: rec?.movies || [],       // keep if you later include in metadata
 		pictures: rec?.pictures || [],
+		jjgirlData: jjgirlData
 	};
 }
 
 /* ----------- Pictures item with preserved aspect ratio ----------- */
 const DEFAULT_RATIO = 3 / 4;
 function PictureItem({ uri }) {
-	const [ratio, setRatio] = React.useState(DEFAULT_RATIO);
-	React.useEffect(() => {
+	const [ratio, setRatio] = useState(DEFAULT_RATIO);
+	useEffect(() => {
 		let mounted = true;
 		if (!uri) return;
 		Image.getSize(
@@ -137,14 +140,18 @@ export default function ActressDetailScreen() {
 	const route = useRoute();
 	const { actressName } = route?.params ?? {};
 
-	const [state, setState] = React.useState({
+	const [state, setState] = useState({
 		loading: true,
 		error: null,
 		actress: null,
 	});
+	const [updatingFavorite, setUpdatingFavorite] = useState(false);
+	const scaleAnim = useRef(new Animated.Value(1)).current;
+
+	const [hasJJGirlGallery] = useState(false); // set true later when you have real condition
 
 	// Fetch on mount/by name
-	React.useEffect(() => {
+	useEffect(() => {
 		let cancelled = false;
 		const controller = new AbortController();
 
@@ -152,12 +159,6 @@ export default function ActressDetailScreen() {
 			setState((s) => ({ ...s, loading: true, error: null }));
 			try {
 				// TODO: define your real request body. Example below searches by exact name:
-				const body = {
-					"name": actressName,
-					"updateRecord": false,
-					"reuseSavedFile": true,
-					"displayType": "json"
-				}; // <-- adjust to your API contract
 				const url = SEARCH_URL + "?name=" + encodeURIComponent(actressName);
 				const res = await fetch(url, {
 					method: 'GET',
@@ -168,7 +169,7 @@ export default function ActressDetailScreen() {
 				if (!res.ok) throw new Error(`HTTP ${res.status}`);
 				const actressData = await res.json(); // single object per your sample
 				// const actressData = jsonData.data[0];
-				console.log('[actressData]', actressData)
+				// console.log('[actressData]', actressData)
 				if (!actressData) throw new Error('Not found');
 
 				const actress = mapServerToActress(actressData);
@@ -270,6 +271,76 @@ export default function ActressDetailScreen() {
 		try { if (url && (await Linking.canOpenURL(url))) await Linking.openURL(url); } catch { }
 	};
 
+	const runFavoriteAnim = () => {
+		Animated.sequence([
+			Animated.timing(scaleAnim, {
+				toValue: 1.3,
+				duration: 120,
+				useNativeDriver: true,
+			}),
+			Animated.spring(scaleAnim, {
+				toValue: 1,
+				friction: 4,
+				useNativeDriver: true,
+			}),
+		]).start();
+	};
+
+
+	const handleToggleFavorite = async () => {
+		if (!actress) return;
+
+		const current = actress.my_favorite;
+		const newValue = !current;
+
+		// Optimistic update
+		setState((prev) => ({
+			...prev,
+			actress: {
+				...prev.actress,
+				my_favorite: newValue,
+			},
+		}));
+
+		// Run heart animation
+		runFavoriteAnim();
+
+		try {
+			setUpdatingFavorite(true);
+
+			// replace URL and body with your real API
+			const updateResult = await fetch('http://192.168.1.77:3123/api/idol/my-favorite', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					id: actress.id,      // or name, contentId... depending on your backend
+					myFavValue: newValue ? 1 : 0,
+				}),
+			});
+			if (updateResult.ok) {
+				const result = await updateResult.json();
+				console.log(result)
+				setState((prev) => ({
+					...prev,
+					actress: {
+						...prev.actress,
+						my_favorite: Number(result.valueUpdated),
+					},
+				}));
+			}
+		} catch (e) {
+			// Revert on failure
+			setState((prev) => ({
+				...prev,
+				actress: {
+					...prev.actress,
+					my_favorite: current,
+				},
+			}));
+		} finally {
+			setUpdatingFavorite(false);
+		}
+	};
 	return (
 		<ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
 			{/* Cover */}
@@ -278,10 +349,41 @@ export default function ActressDetailScreen() {
 			{/* Avatar */}
 			<View style={styles.avatarWrap}>
 				<Image source={{ uri: actress.avatar }} style={styles.avatar} />
+				<Pressable
+					style={styles.favoriteButton}
+					onPress={handleToggleFavorite}
+					disabled={updatingFavorite}
+				>
+					<Animated.Text
+						style={[
+							styles.favoriteIcon,
+							actress.my_favorite === 1 ? styles.favoriteIconActive : styles.favoriteIconInactive,
+							{ transform: [{ scale: scaleAnim }] }, // <--- animation
+						]}
+					>
+						♥
+					</Animated.Text>
+				</Pressable>
 			</View>
 
 			{/* Name */}
-			<Text style={styles.name}> {formatName(actress.name)}</Text>
+			<Text style={styles.name}>{actress.name}</Text>
+
+			{actress.jjgirlData && (
+				<View style={{ paddingHorizontal: 16, marginTop: 10 }}>
+					<Pressable
+						style={styles.jjgirlButton}
+						onPress={() =>
+							navigation.navigate('ActressDetailJJGirl', {
+								actressName: actress.name,
+								data: actress.jjgirlData
+							})
+						}
+					>
+						<Text style={styles.jjgirlButtonText}>View JJGirl Gallery</Text>
+					</Pressable>
+				</View>
+			)}
 
 			{/* About */}
 			<View style={styles.section}>
@@ -499,4 +601,44 @@ const styles = StyleSheet.create({
 	// Pictures with aspect ratio
 	pictureBox: { width: '100%', borderRadius: 10, overflow: 'hidden', backgroundColor: '#151922' },
 	pictureImg: { width: '100%', height: '100%' },
+	nameRow: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		justifyContent: 'space-between',
+	},
+	favoriteButton: {
+		paddingLeft: 5,
+		paddingTop: 3,
+		borderWidth: 2,
+		borderColor: '#000000',
+		borderRadius: 50,
+		backgroundColor: "#ffffffff",
+		position: "absolute",
+		top: 90, left: 90
+	},
+	favoriteIcon: {
+		fontSize: 17,
+		width: 25,
+		height: 26
+	},
+	favoriteIconActive: {
+		color: '#ef4444', // red when favorite
+	},
+	favoriteIconInactive: {
+		color: '#000000', // red when favorite
+	},
+	jjgirlButton: {
+		borderRadius: 10,
+		borderWidth: 1,
+		borderColor: '#1f2430',
+		backgroundColor: '#151922',
+		paddingVertical: 10,
+		alignItems: 'center',
+		justifyContent: 'center',
+	},
+	jjgirlButtonText: {
+		color: '#5b9cff',
+		fontWeight: '700',
+		fontSize: 13,
+	},
 });

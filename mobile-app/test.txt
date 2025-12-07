@@ -1,16 +1,6 @@
-for the ActressDetailPage, i want to have:
-+ from above of all, an image cover full screen width
-+ an actress's avatar
-+ actress name
-+ About section
-+ Social medias
-+ tags
-+ Date of birth, date of debut
-+ movies count
-+ Measurements
-+ a slideshow of film covers (display in grid style, maximum 8 films, with title: "Films", has code each film)
-+ a slide show of her pictures (display vertically, maximum 10)
-
-
-
-'https://fourhoi.com/ipx-906/preview.mp4'
+create a new page call ActressDetailJJGirlScreen, 
+this page is an gallery that contains:
+- pagination
+- 3 columns of the photos
+- each photo url is built by the page number and an index (from 1 - 12)
+- the ActressDetailJJGirlScreen is navigated from ActressDetailScreen, but with condition (for the moment, create a useState boolean and i will define the condition later)

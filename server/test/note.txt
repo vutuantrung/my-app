@@ -1,1 +1,18 @@
-it works! Now we're focusing only the Electron app. Design for me a page which can display a model information. The data includes: Name, Avatar, Cover photos (about 5 images and scroll horizontally automatically), Date of birth, Date of debut, Movies count, Measurements, Tags, Movies posters images. The page is responsive
+New-NetFirewallRule `
+  -DisplayName "Express-WS-3124" `
+  -Direction Inbound `
+  -Protocol TCP `
+  -LocalPort 3124 `
+  -Profile Private `
+  -Action Allow
+
+Get-NetFirewallRule -DisplayName "Express-WS-3124" |
+  Format-List DisplayName,Enabled,Profile,Direction,Action
+
+Get-NetFirewallRule -DisplayName "Express-WS-3124" |
+Get-NetFirewallPortFilter |
+Format-List LocalPort,Protocol
+
+netstat -ano | findstr ":3124"
+
+lets create a new ws server running on port 3124, whenever something changes (new movie, new idol, news, systems...), the server can broadcast to all its subcribers, the format will be json with properties(id, messageType, title, createdAt, data)

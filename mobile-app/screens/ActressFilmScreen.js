@@ -1,9 +1,9 @@
 // screens/ActressFilmScreen.js
-import * as React from 'react';
+import { useState, useMemo } from 'react';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import {
 	View, Text, StyleSheet, FlatList, Image, Pressable, TextInput, Dimensions,
 } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
 
 const { width } = Dimensions.get('window');
 const NUM_COLUMNS = 2;
@@ -17,18 +17,17 @@ const SORTS = [
 	{ key: 'date', label: 'Date' }, // used if your film items have releaseDate
 ];
 
-
 export default function ActressFilmScreen() {
 	const navigation = useNavigation();
 	const route = useRoute();
 	const { films = [], actressName = 'Actress' } = route?.params ?? {};
 
-	const [query, setQuery] = React.useState('');
-	const [page, setPage] = React.useState(1);
-	const [sortKey, setSortKey] = React.useState('title');   // 'title' | 'code' | 'date'
-	const [sortDir, setSortDir] = React.useState('asc');
+	const [query, setQuery] = useState('');
+	const [page, setPage] = useState(1);
+	const [sortKey, setSortKey] = useState('title');   // 'title' | 'code' | 'date'
+	const [sortDir, setSortDir] = useState('asc');
 
-	const filtered = React.useMemo(() => {
+	const filtered = useMemo(() => {
 		const q = query.trim().toLowerCase();
 		if (!q) return films;
 		return films.filter(f =>
@@ -37,7 +36,7 @@ export default function ActressFilmScreen() {
 		);
 	}, [films, query]);
 
-	const sorted = React.useMemo(() => {
+	const sorted = useMemo(() => {
 		const arr = [...filtered];
 		const dir = sortDir === 'asc' ? 1 : -1;
 		arr.sort((a, b) => {
@@ -56,7 +55,7 @@ export default function ActressFilmScreen() {
 		return arr;
 	}, [filtered, sortKey, sortDir]);
 
-	const data = React.useMemo(() => sorted.slice(0, PAGE_SIZE * page), [sorted, page]);
+	const data = useMemo(() => sorted.slice(0, PAGE_SIZE * page), [sorted, page]);
 
 	const canLoadMore = data.length < filtered.length;
 

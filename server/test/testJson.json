@@ -1,17 +1,38 @@
 {
+    "avatar": "/images/idol-avatars/suzuna-yamada-avatar.jpg",
     "country": "?",
+    "cover": "/images/idol-pictures/suzuna-yamada-0.webp",
     "created_time": 1760920011655,
     "cup": "F",
     "dob": "2005-03-07",
     "favorite": "22",
     "height": "151 cm",
     "id": 598,
-    "jp": "山田 鈴奈",
+    "jp": "山田鈴奈",
     "measurements": "88-54-85",
     "metadata": "{\"avatar\":\"https://www.javdatabase.com/idolimages/full/suzuna-yamada.webp\",\"age\":\"20\",\"debut\":\"2025-07-04\",\"sign\":\"\",\"blood\":\"\",\"shoe_size\":\"\",\"hair_length\":\"Long\",\"hair_color\":\"Black\",\"tags\":\"birth_year:2005.00,2005.00|debut_year:2025.00,2025.00|debut_age:20.00,20.00|cup_size:f|height:151.00,151.00|hair_length:long|hair_color:black|age_group:twenties|body_type:slim\",\"javherQueryName\":\"yamada-suzuna\"}",
+    "movies": [
+        { "code": "ipzz-694", "thumb": "https://pics.dmm.co.jp/digital/video/ipzz00694/ipzz00694ps.jpg" },
+        { "code": "ipzz-725", "thumb": "https://pics.dmm.co.jp/digital/video/ipzz00725/ipzz00725ps.jpg" },
+        { "code": "ipzz-692", "thumb": "https://pics.dmm.co.jp/digital/video/ipzz00692/ipzz00692ps.jpg" },
+        { "code": "ipzz-644", "thumb": "https://pics.dmm.co.jp/digital/video/ipzz00644/ipzz00644ps.jpg" },
+        { "code": "ipzz-610", "thumb": "https://pics.dmm.co.jp/digital/video/ipzz00610/ipzz00610ps.jpg" }
+    ],
     "movies_count": 5,
     "my_favorite": 1,
     "name": "suzuna-yamada",
     "note": "5.00/5",
+    "pictures": [
+        "/images/idol-pictures/suzuna-yamada-1.webp",
+        "/images/idol-pictures/suzuna-yamada-2.webp",
+        "/images/idol-pictures/suzuna-yamada-3.webp",
+        "/images/idol-pictures/suzuna-yamada-4.webp",
+        "/images/idol-pictures/suzuna-yamada-5.webp",
+        "/images/idol-pictures/suzuna-yamada-6.webp",
+        "/images/idol-pictures/suzuna-yamada-7.webp",
+        "/images/idol-pictures/suzuna-yamada-8.webp",
+        "/images/idol-pictures/suzuna-yamada-9.webp",
+        "/images/idol-pictures/suzuna-yamada-10.webp"
+    ],
     "updated_time": 1760920012871
 }

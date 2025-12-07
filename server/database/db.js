@@ -8,15 +8,16 @@ db.exec('PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL;');
 db.configure('busyTimeout', 5000); // 5s
 
 db.serialize(() => {
-    javActressSerialize();
-    cosplayerSerialize();
+	javActressSerialize();
+	cosplayerSerialize();
 });
 
 function javActressSerialize() {
-    db.run(`
+	db.run(`
         CREATE TABLE IF NOT EXISTS idol_profile (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
+		alias TEXT,
         dob TEXT,
         measurements TEXT,
         height INTEGER,
@@ -32,12 +33,12 @@ function javActressSerialize() {
         metadata TEXT
     )`);
 
-    db.run(`
+	db.run(`
 		CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_model
 		ON idol_profile (name);
 	`);
 
-    db.run(`
+	db.run(`
         CREATE TABLE IF NOT EXISTS movie (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         contentId TEXT NOT NULL,
@@ -57,26 +58,26 @@ function javActressSerialize() {
         metadata TEXT
     )`);
 
-    db.run(`
+	db.run(`
         CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_movie
         ON movie (code, contentId);
 	`);
 
-    // relation: idol - movie
-    db.run(`
+	// relation: idol - movie
+	db.run(`
     CREATE TABLE IF NOT EXISTS idol_movie (
       idol_name TEXT NOT NULL,
       movie_code TEXT NOT NULL,
       movie_contentId TEXT
     )`);
 
-    db.run(`
+	db.run(`
 		CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_idolmovie
 		ON idol_movie (idol_name, movie_code, movie_contentId);
 	`);
 }
 function cosplayerSerialize() {
-    db.run(`
+	db.run(`
     CREATE TABLE IF NOT EXISTS model_profile (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
@@ -93,12 +94,12 @@ function cosplayerSerialize() {
         metadata TEXT
     )`);
 
-    db.run(`
+	db.run(`
     CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_model
 		ON model_profile (name);
 	`);
 
-    db.run(`
+	db.run(`
     CREATE TABLE IF NOT EXISTS album (
         id TEXT PRIMARY KEY,
         title TEXT NOT NULL,
@@ -113,19 +114,19 @@ function cosplayerSerialize() {
         metadata TEXT
     )`);
 
-    db.run(`
+	db.run(`
 		CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_album
 		ON album (id);
 	`);
 
-    // relation: model - album
-    db.run(`
+	// relation: model - album
+	db.run(`
     CREATE TABLE IF NOT EXISTS model_album (
         model_name TEXT NOT NULL,
         album_id TEXT NOT NULL
     )`);
 
-    db.run(`
+	db.run(`
     CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_modelalbum
 		ON model_album (model_name, album_id);
 	`);

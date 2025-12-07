@@ -1,5 +1,5 @@
 // screens/DashboardScreen.js
-import * as React from 'react';
+import { useEffect, useState, useRef } from 'react';
 import {
 	View,
 	Text,
@@ -10,9 +10,11 @@ import {
 	Image,
 	FlatList,
 	ActivityIndicator,
+	Dimensions
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { formatName } from '../helper';
+import DashboardNotificationsSection from './DashboardNotificationsSection';
 
 const CATEGORIES = ['All', 'Action', 'Drama', 'Comedy', 'Sci-Fi', 'Romance', 'Thriller'];
 
@@ -22,14 +24,52 @@ const TOP_MOVIE_URL = 'http://192.168.1.77:3123/api/movie/top?limit=10';
 
 export default function DashboardScreen() {
 	const navigation = useNavigation();
-	const [query, setQuery] = React.useState('');
-	const [activeCategory, setActiveCategory] = React.useState('All');
+	const [query, setQuery] = useState('');
+	const [activeCategory, setActiveCategory] = useState('All');
 
 	// ---- fetch top movies from server ----
-	const [topMovies, setTopMovies] = React.useState([]);
-	const [loadingMovies, setLoadingMovies] = React.useState(false);
+	const [topMovies, setTopMovies] = useState([]);
+	const [loadingMovies, setLoadingMovies] = useState(false);
 
-	React.useEffect(() => {
+	const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+	// TODO: replace these with your real image URLs
+	//'https://picsum.photos/seed/hero1/1200/600',
+	const HERO_IMAGES = [
+		'http://192.168.1.77:3123/images/system-assets/wall_1.jpg',
+		'http://192.168.1.77:3123/images/system-assets/wall_2.png',
+		'http://192.168.1.77:3123/images/system-assets/wall_3.png',
+		'http://192.168.1.77:3123/images/system-assets/wall_4.png',
+		'http://192.168.1.77:3123/images/system-assets/wall_5.jpg',
+		'http://192.168.1.77:3123/images/system-assets/wall_6.gif',
+		'http://192.168.1.77:3123/images/system-assets/wall_7.webp',
+		'http://192.168.1.77:3123/images/system-assets/wall_11.png',
+	];
+
+	const [heroIndex, setHeroIndex] = useState(0);
+	const heroScrollRef = useRef(null);
+
+	useEffect(() => {
+		if (!heroScrollRef.current || HERO_IMAGES.length === 0) return;
+
+		const interval = setInterval(() => {
+			setHeroIndex(prev => {
+				const next = (prev + 1) % HERO_IMAGES.length;
+				if (heroScrollRef.current) {
+					heroScrollRef.current.scrollTo({
+						x: next * SCREEN_WIDTH,
+						y: 0,
+						animated: true,
+					});
+				}
+				return next;
+			});
+		}, 10_000); // 4s per slide
+
+		return () => clearInterval(interval);
+	}, []);
+
+	useEffect(() => {
 		let cancelled = false;
 		const controller = new AbortController();
 
@@ -69,10 +109,10 @@ export default function DashboardScreen() {
 	}, []);
 
 	// ---- fetch top actress from server ----
-	const [topActress, setTopActress] = React.useState([]);
-	const [loadingActress, setLoadingActress] = React.useState(false);
+	const [topActress, setTopActress] = useState([]);
+	const [loadingActress, setLoadingActress] = useState(false);
 
-	React.useEffect(() => {
+	useEffect(() => {
 		let cancelled = false;
 		const controller = new AbortController();
 
@@ -116,11 +156,58 @@ export default function DashboardScreen() {
 
 	return (
 		<ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 28 }}>
-			{/* Header */}
-			<View style={styles.header}>
-				<Image source={{ uri: 'https://picsum.photos/seed/logo/120/120' }} style={styles.logo} />
-				<Text style={styles.appName}>My Cinema</Text>
+			{/* Auto-scroll hero slider */}
+			<View style={{ marginTop: -20 }}>
+				<ScrollView
+					ref={heroScrollRef}
+					horizontal
+					pagingEnabled
+					showsHorizontalScrollIndicator={false}
+					scrollEventThrottle={16}
+				>
+					{HERO_IMAGES.map((uri, index) => (
+						<View key={index} style={{ width: SCREEN_WIDTH }}>
+							<Image
+								source={{ uri }}
+								style={{
+									width: '100%',
+									height: 300,
+									borderRadius: 12,
+									marginHorizontal: 0
+								}}
+							/>
+						</View>
+					))}
+				</ScrollView>
+
+				{/* Dots indicator */}
+				{/* <View
+					style={{
+						position: 'absolute',
+						bottom: 10,
+						left: 0,
+						right: 0,
+						flexDirection: 'row',
+						justifyContent: 'center',
+						gap: 6,
+					}}
+				>
+					{HERO_IMAGES.map((_, i) => (
+						<View
+							key={i}
+							style={{
+								width: i === heroIndex ? 10 : 6,
+								height: i === heroIndex ? 10 : 6,
+								borderRadius: 999,
+								backgroundColor: i === heroIndex ? '#ffffff' : 'rgba(255,255,255,0.4)',
+							}}
+						/>
+					))}
+				</View> */}
 			</View>
+
+			{/* New notification section */}
+			<DashboardNotificationsSection />
 
 			{/* Search bar */}
 			<View style={styles.searchWrap}>

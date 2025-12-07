@@ -3,11 +3,12 @@ const path = require("path");
 
 const idolDbServices = require("../services/idol.service.database");
 const movieDbServices = require("../services/movie.service.database");
-const idolMovieDbServices = require("../services/idolMovie.services.database");
+const idolMovieDbServices = require("../services/idolMovie.service.database");
 const idolCrawlingServices = require("../services/idol.service.crawl");
 
 const { parseIdolName, renderIdolHTMLTemplate, shuffleArray, generateRandomNumber } = require("../helpers");
 const { crawlIdolFromJJGirl } = require("../features/jjgirls/jjgirls.utils");
+const { broadcast } = require("../serverWS");
 
 async function searchIdol(req, res) {
 	try {
@@ -19,7 +20,7 @@ async function searchIdol(req, res) {
 		console.log("\n👩  ", mainName);
 
 		// 1. search in db
-		const idolsFound = await idolDbServices.searchIdolsByName(mainName);
+		const idolsFound = await idolDbServices.searchIdolsByNames(mainName);
 		// console.log('[idolsFound]', idolsFound);
 
 		// 2. if has => return
@@ -28,9 +29,9 @@ async function searchIdol(req, res) {
 		}
 		// console.log('[idolsFound]', idolsFound);
 		if (idolsFound.data.length > 0 && !updateRecord) {
-			const searchMoviesReq = await idolMovieDbServices.searchMovieByIdolName(mainName);
+			const searchMoviesReq = await idolMovieDbServices.searchMoviesByIdolName(mainName);
 
-			const moviesCode = searchMoviesReq.map(e => e.movie_code);
+			const moviesCode = searchMoviesReq.data.map(e => e.movie_code);
 			const shuffledMoviesCode = shuffleArray(moviesCode.filter(e => e.includes("-"))).slice(0, 8).filter(Boolean);
 			const moviesDataReq = await movieDbServices.searchMoviesByCodes(shuffledMoviesCode.join(","));
 
@@ -164,8 +165,14 @@ async function searchIdol(req, res) {
 		// 5.1 save idol
 		if (idolsFound.data.length > 0) {
 			if (mainName) await idolDbServices.updateIdolByName(mainName, idol);
+			broadcast("movie.updated", "New idol updated: " + mainName, {
+				idol: { name: mainName }
+			})
 		} else {
 			await idolDbServices.createIdols([idol]);
+			broadcast("movie.created", "New idol added: " + mainName, {
+				idol: { name: mainName }
+			})
 		}
 
 		// 5.2 save movie(s)
@@ -197,20 +204,20 @@ async function getPagination(req, res) {
 	try {
 		const {
 			page, pageSize,
-			search,        // optional: fuzzy search on name/jp
-			favorite,      // optional: exact match on favorite field
-			my_favorite,   // optional: 0|1
-			sort,          // optional: id|name|created_time|updated_time|movies_count
-			order          // optional: asc|desc
+			search,
+			favorite,
+			my_favorite,
+			sortBy,
+			sortOrder,
 		} = req.query;
 
-		const result = await idolDbServices.getIdolsPaginated({
+		const result = await idolDbServices.searchIdolsPaginated({
 			page, pageSize,
 			search,
 			favorite,
 			my_favorite: (my_favorite === undefined ? undefined : Number(my_favorite)),
-			sort,
-			order,
+			sortBy,
+			sortOrder,
 		});
 
 		return res.json(result);
@@ -229,8 +236,8 @@ async function searchIdolsByNameLike(req, res) {
 async function searchIdolByExactName(req, res) {
 	const { name } = req.query;
 	console.log('[searchIdolByExactName]', name)
-	const result = await idolDbServices.searchIdolsByName(name);
-	const idol = result.data.length > 0 ? result.data[0] : null;
+	const idolFound = await idolDbServices.searchIdolByName(name);
+	const idol = idolFound;
 	if (idol) {
 		// 4.5 get avatar
 		const avatarDir = path.join(process.cwd(), "database", "idol-avatars");
@@ -258,16 +265,15 @@ async function searchIdolByExactName(req, res) {
 		if (!idol.cover) idol.cover = `/images/idol-pictures/anonymous-${generateRandomNumber(0, 10)}.webp`;
 
 		// sample movies
-		const searchMoviesReq = await idolMovieDbServices.searchMovieByIdolName(idol.name);
+		const searchMoviesReq = await idolMovieDbServices.searchMoviesByIdolName(idol.name);
 
-		const moviesCode = searchMoviesReq.map(e => e.movie_code);
+		const moviesCode = searchMoviesReq.data.map(e => e.movie_code);
 		const shuffledMoviesCode = shuffleArray(moviesCode.filter(e => e.includes("-"))).slice(0, 8).filter(Boolean);
 		const moviesDataReq = await movieDbServices.searchMoviesByCodes(shuffledMoviesCode.join(","));
 
 		const moviesReturn = moviesDataReq.data.map(e => ({ code: e.code, thumb: e.thumbs_short }));
 		idol.movies = moviesReturn;
 	}
-	console.log(idol)
 	return res.json(idol);
 }
 
@@ -283,12 +289,24 @@ async function searchIdolByMyFavorite(req, res) {
 	return res.json(idolReturn);
 }
 
-// searchIdolByExactName("ai-uehara");
+async function setMyFavorite(req, res) {
+	const { id, myFavValue } = req.body;
+	console.log(id, myFavValue)
+	let valueUpdate = undefined;
+	if (typeof myFavValue === "boolean") valueUpdate = myFavValue === true ? 1 : 0;
+	if (typeof myFavValue === "string") valueUpdate = myFavValue === "1" ? 1 : 0;
+	if (typeof myFavValue === "number") valueUpdate = myFavValue === 1 ? 1 : 0;
+	const updateResult = valueUpdate === undefined
+		? false
+		: (await idolDbServices.updateIdolById(id, { my_favorite: valueUpdate })) ? true : false;
+	res.json({ result: updateResult, valueUpdated: valueUpdate });
+}
 
 module.exports = {
 	searchIdol,
 	getPagination,
 	searchIdolByMyFavorite,
 	searchIdolsByNameLike,
-	searchIdolByExactName
+	searchIdolByExactName,
+	setMyFavorite
 }

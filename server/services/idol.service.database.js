@@ -1,14 +1,15 @@
 const db = require("../database/db");
 const { createPropertiesCREATEColumns, createPropertiesValues, createRecordArrayByPropertyName, createPropertiesUPDATEColumns } = require("../helpers");
 
-const columns = ["name", "dob", "measurements", "height", "country", "cup", "movies_count", "note", "favorite", "jp", "my_favorite", "created_time", "updated_time", "metadata"]
+const columns = ["name", "dob", "measurements", "height", "country", "cup", "movies_count", "note", "favorite", "jp", "my_favorite", "created_time", "updated_time", "metadata"];
 
-const SORTABLE = new Set(["id", "name", "created_time", "updated_time", "movies_count"]);
-function normalizeSort(sort) {
+const IDOL_SORT_COLUMNS = new Set(["id", "cup", "note", "name", "created_time", "updated_time", "movies_count"]);
+function normalizeIdolSort(sort) {
+	console.log(sort)
 	const s = String(sort || "name").toLowerCase();
-	return SORTABLE.has(s) ? s : "name";
+	return IDOL_SORT_COLUMNS.has(s) ? s : "name";
 }
-function normalizeOrder(order) {
+function normalizeIdolOrder(order) {
 	const o = String(order || "asc").toLowerCase();
 	return o === "desc" ? "DESC" : "ASC";
 }
@@ -17,10 +18,23 @@ function clamp(n, min, max) {
 }
 
 
-// GET all or search by names (comma-separated)
-async function searchIdolsByName(name) {
+async function searchIdolByName(name) {
 	return new Promise((resolve, reject) => {
-		const terms = name ? name.split(',').map(n => n.trim()).filter(Boolean) : [];
+		const sqlCommand = 'SELECT * FROM idol_profile WHERE name = ? COLLATE NOCASE';
+		db.get(sqlCommand, [name], (err, row) => {
+			if (err) {
+				console.error('[searchIdolByName]', `Search failed: ${err.message}`);
+				return reject(err);
+			}
+			resolve(row || null);
+		});
+	});
+}
+
+// GET all or search by names (comma-separated)
+async function searchIdolsByNames(names) {
+	return new Promise((resolve, reject) => {
+		const terms = names ? names.split(',').map(n => n.trim()).filter(Boolean) : [];
 		let sqlCommand = 'SELECT * FROM idol_profile';
 		let params = [];
 
@@ -32,17 +46,16 @@ async function searchIdolsByName(name) {
 
 		db.all(sqlCommand, params, (err, rows) => {
 			if (err) {
-				console.error('[searchIdolsByName]', `Search failed: ${err.message}`);
+				console.error('[searchIdolsByNames]', `Search failed: ${err.message}`);
 				return reject(err);
 			}
-			resolve({ data: rows });
+			resolve({ data: rows || [] });
 		});
 	});
 }
 
 async function searchIdolsByNameLike(name) {
 	return new Promise((resolve, reject) => {
-		console.log(name)
 		const terms = name ? name.split(',').map(n => n.trim()).filter(Boolean) : [];
 		let sqlCommand = 'SELECT * FROM idol_profile';
 		let params = [];
@@ -55,7 +68,7 @@ async function searchIdolsByNameLike(name) {
 
 		db.all(sqlCommand, params, (err, rows) => {
 			if (err) {
-				console.error('[searchIdolsByName]', `Search failed: ${err.message}`);
+				console.error('[searchIdolsByNameLike]', `Search failed: ${err.message}`);
 				return reject(err);
 			}
 			resolve({ data: rows });
@@ -70,18 +83,19 @@ async function searchIdolByMyFavorite() {
 			(err, rows) => {
 				if (err) {
 					console.log('[searchIdolByMyFavorite]', `Search failed: ${err.message}`)
-					resolve({ data: null });
+					return reject(err);
 				};
 				resolve({ data: rows });
 			});
 	});
 }
 
-async function getIdolsPaginated(options = {}) {
+async function searchIdolsPaginated(options = {}) {
+	console.log(options)
 	const page = clamp(parseInt(options.page || 1, 10) || 1, 1, 1e9);
 	const pageSize = clamp(parseInt(options.pageSize || 20, 10) || 20, 1, 200);
-	const sort = normalizeSort(options.sort);
-	const order = normalizeOrder(options.order);
+	const sort = normalizeIdolSort(options.sortBy);
+	const order = normalizeIdolOrder(options.sortOrder);
 
 	const where = [];
 	const params = [];
@@ -91,13 +105,10 @@ async function getIdolsPaginated(options = {}) {
 		const k = `%${options.search}%`;
 		params.push(k, k);
 	}
-	if (options.favorite) {
-		where.push("favorite = ?");
-		params.push(options.favorite);
-	}
 	if (options.my_favorite !== undefined) {
+		const mf = Number(options.my_favorite) ? 1 : 0;
 		where.push("my_favorite = ?");
-		params.push(options.my_favorite ? 1 : 0);
+		params.push(mf);
 	}
 
 	const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
@@ -115,14 +126,8 @@ async function getIdolsPaginated(options = {}) {
 	const sliceParams = params.slice();
 	sliceParams.push(pageSize, offset);
 
-	const sql = `
-    SELECT id, name, movies_count
-    FROM idol_profile
-    ${whereSql}
-    ORDER BY ${sort} ${order}, id ASC
-    LIMIT ? OFFSET ?
-  `;
-
+	const sql = `SELECT id, name, movies_count FROM idol_profile ${whereSql} ORDER BY ${sort} ${order}, id ASC LIMIT ? OFFSET ?`;
+	console.log(sql)
 	const rows = await new Promise((resolve, reject) => {
 		db.all(sql, sliceParams, (err, arr) => {
 			if (err) return reject(err);
@@ -148,7 +153,7 @@ async function searchIdolByNote(keyword) {
 			(err, rows) => {
 				if (err) {
 					console.log('[searchIdolByNote]', `Search failed: ${err.message}`)
-					resolve({ data: null });
+					return reject(err);
 				};
 				resolve({ data: rows });
 			});
@@ -162,7 +167,7 @@ async function searchIdolByFavorite(favorite) {
 			(err, rows) => {
 				if (err) {
 					console.log('[searchIdolByFavorite]', `Search failed: ${err.message}`);
-					resolve({ data: null })
+					return reject(err);
 				};
 				resolve({ data: rows });
 			});
@@ -224,7 +229,7 @@ async function updateIdolByName(name, idolUpdateData) {
 		db.run(sqlCommand, [...valuesArr, name], function (err) {
 			if (err) {
 				console.log('[updateIdolByName]', `Update failed: ${err.message}`);
-				resolve(false);
+				return reject(err);
 			}
 			console.log('[updateIdolByName]', `Update successfully: ${name}`);
 			return resolve(this.changes > 0);       // true only if a row was changed
@@ -240,7 +245,7 @@ async function deleteIdolById(id) {
 			function (err) {
 				if (err) {
 					console.log('[deleteIdolById]', `Delete failed: ${err.message}`);
-					resolve(false);
+					return reject(err);
 				}
 				console.log('[deleteIdolById]', `Delete successfully: ${id}`);
 				resolve(id);
@@ -249,13 +254,15 @@ async function deleteIdolById(id) {
 }
 
 module.exports = {
-	searchIdolsByName,
+	searchIdolByName,
+	searchIdolsByNames,
 	searchIdolsByNameLike,
 	searchIdolByFavorite,
 	searchIdolByMyFavorite,
 	searchIdolByNote,
-	getIdolsPaginated,
+	searchIdolsPaginated,
 	createIdols,
 	updateIdolByName,
+	updateIdolById,
 	deleteIdolById
 };

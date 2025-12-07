@@ -297,7 +297,7 @@ function renderMovieHTMLTemplate(movieDatas) {
 	const html = parse(moviesTemplateString);
 
 	for (const movieData of movieDatas) {
-		console.log('[movieData]', movieData)
+		// console.log('[movieData]', movieData)
 		const movieTemplateString = fs.readFileSync("./assets/TEMPLATE_MOVIE.html", "utf-8");
 		const articleElement = parse(movieTemplateString);
 

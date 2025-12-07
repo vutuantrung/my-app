@@ -1,5 +1,5 @@
 // screens/ActressScreen.js
-import * as React from 'react';
+import { useCallback, useEffect, useState, useRef, useMemo } from 'react';
 import {
 	View,
 	Text,
@@ -95,60 +95,96 @@ export default function ActressScreen() {
 	const navigation = useNavigation();
 
 	// paged list data (from GET /api/idol?page=..)
-	const [items, setItems] = React.useState([]);
-	const [page, setPage] = React.useState(1);
-	const [loading, setLoading] = React.useState(false);
-	const loadingRef = React.useRef(false);
-	const [refreshing, setRefreshing] = React.useState(false);
-	const [hasMore, setHasMore] = React.useState(true);
+	const [items, setItems] = useState([]);
+	const [page, setPage] = useState(1);
+	const [loading, setLoading] = useState(false);
+	const [refreshing, setRefreshing] = useState(false);
+	const [hasMore, setHasMore] = useState(true);
 
 	// search
-	const [query, setQuery] = React.useState('');
-	const [remoteResults, setRemoteResults] = React.useState([]); // results from POST /api/idol/search
-	const [searchLoading, setSearchLoading] = React.useState(false);
-	const [externalLoading, setExternalLoading] = React.useState(false);
-	const [externalError, setExternalError] = React.useState(null);
+	const [query, setQuery] = useState('');
+	const [remoteResults, setRemoteResults] = useState([]); // results from POST /api/idol/search
+	const [searchLoading, setSearchLoading] = useState(false);
+	const [externalLoading, setExternalLoading] = useState(false);
+	const [externalError, setExternalError] = useState(null);
 
-	const abortRef = React.useRef(null);
+	// Filter + Order
+	// filter: 'none' | 'my_favorite'
+	const [filter, setFilter] = useState('none');
+	// orderBy: 'none' | 'created_time' | 'release_time'
+	const [orderBy, setOrderBy] = useState('none');
+	// order direction: 'asc' | 'desc'
+	const [orderDirection, setOrderDirection] = useState('desc');
+
+	// dropdown open flags
+	const [filterDropdownOpen, setFilterDropdownOpen] = useState(false);
+	const [orderDropdownOpen, setOrderDropdownOpen] = useState(false);
+
+	const loadingRef = useRef(false);
+	const abortRef = useRef(null);
 
 	/* --------------------- fetch paged list --------------------- */
-	const fetchPage = React.useCallback(async (nextPage, replace = false) => {
-		if (loadingRef.current) return;
-		setLoading(true);
-		loadingRef.current = true;
+	const fetchIdolData = useCallback(
+		async (nextPage, replace = false) => {
+			if (loadingRef.current) return;
+			setLoading(true);
+			loadingRef.current = true;
 
-		console.log(`Fetching idols page ${nextPage}...`);
+			if (abortRef.current) abortRef.current.abort();
+			const controller = new AbortController();
+			abortRef.current = controller;
 
-		if (abortRef.current) abortRef.current.abort();
-		const controller = new AbortController();
-		abortRef.current = controller;
+			try {
+				let url = `${BASE_LIST_URL}?page=${nextPage}&pageSize=${PAGE_SIZE}`;
 
-		try {
-			const url = `${BASE_LIST_URL}?page=${nextPage}&pageSize=${PAGE_SIZE}`;
-			const res = await fetch(url, { signal: controller.signal });
-			if (!res.ok) throw new Error(`HTTP ${res.status}`);
-			const json = await res.json();                // ✅ server returns { data: [...] }
-			const arr = Array.isArray(json?.data) ? json.data : [];
-			const mapped = arr.map(mapIdolToActress);
+				// filter (My Favorite)
+				if (filter === 'my_favorite') {
+					url += '&my_favorite=1';
+				}
 
-			setItems(prev => (replace ? mapped : [...prev, ...mapped]));
-			setPage(nextPage);
-			setHasMore(arr.length === PAGE_SIZE);
-		} catch (e) {
-			if (e?.name !== 'AbortError') console.warn('Failed to fetch idols:', e?.message || e);
-		} finally {
-			setLoading(false);
-			loadingRef.current = false;
-			setRefreshing(false);
-		}
-	}, []);
+				// order (Created time / Release time)
+				if (orderBy !== 'none') {
+					if (orderBy === 'created_time') url += "&sortBy=created_time";
+					if (orderBy === 'movies_count') url += "&sortBy=movies_count";
+					if (orderBy === 'cup') url += "&sortBy=cup"
+					if (orderBy === 'note') url += "&sortBy=note"
+				}
+				url += `&sortOrder=${orderDirection}`;
 
-	React.useEffect(() => {
-		fetchPage(1, true);
-	}, [fetchPage]);
+				const res = await fetch(url, { signal: controller.signal });
+				if (!res.ok) throw new Error(`HTTP ${res.status}`);
+				const json = await res.json(); // server returns { data: [...] }
+				const arr = Array.isArray(json?.data) ? json.data : [];
+				const mapped = arr.map(mapIdolToActress);
+
+				setItems(prev => (replace ? mapped : [...prev, ...mapped]));
+				setPage(nextPage);
+				setHasMore(arr.length === PAGE_SIZE);
+			} catch (e) {
+				console.error('Error fetching idols:', e);
+				if (e?.name !== 'AbortError')
+					console.warn('Failed to fetch idols:', e?.message || e);
+			} finally {
+				setLoading(false);
+				loadingRef.current = false;
+				setRefreshing(false);
+			}
+		},
+		[filter, orderBy, orderDirection]
+	);
+
+	useEffect(() => {
+		fetchIdolData(1, true);
+	}, [fetchIdolData]);
+
+	// Reload when filter/order changes
+	useEffect(() => {
+		setRemoteResults([]);
+		fetchIdolData(1, true);
+	}, [filter, orderBy, orderDirection, fetchIdolData]);
 
 	/* --------------------- remote search --------------------- */
-	const remoteSearch = React.useCallback(
+	const remoteSearch = useCallback(
 		async (q) => {
 			if (!q || !q.trim()) {
 				setRemoteResults([]);
@@ -160,12 +196,11 @@ export default function ActressScreen() {
 				const res = await fetch(url, {
 					method: 'GET',
 					headers: { 'Content-Type': 'application/json' },
-					// adjust this body to your real search format
+					// If your backend expects POST:
 					// body: JSON.stringify({ name: q.trim() }),
 				});
 				if (!res.ok) throw new Error(`HTTP ${res.status}`);
 				const arr = await res.json();
-				console.log(arr.data)
 				const mapped = (arr.data || []).map(mapIdolToActress);
 				setRemoteResults(mapped);
 			} catch (e) {
@@ -181,19 +216,17 @@ export default function ActressScreen() {
 	// called when text changes
 	const onSearchTextChange = (text) => {
 		setQuery(text);
-		// we do NOT immediately call remote here;
-		// we first let the user finish typing and try local first.
+		// no immediate remote search; only on submit
 	};
 
 	// when user submits search (keyboard search button), do remote
 	const onSubmitSearch = () => {
 		const q = query.trim();
-		// if local has no matches or user explicitly searches, hit API
 		remoteSearch(q);
 	};
 
 	// local filter over loaded pages
-	const localFiltered = React.useMemo(() => {
+	const localFiltered = useMemo(() => {
 		const q = query.trim().toLowerCase();
 		if (!q) return items;
 		return items.filter((a) => (a.name || '').toLowerCase().includes(q));
@@ -206,22 +239,22 @@ export default function ActressScreen() {
 		query.trim().length > 0 && remoteResults.length > 0 ? remoteResults : localFiltered;
 
 	const onEndReached = () => {
-		// only paginate base list when not searching or when showing local results
+		// only paginate base list when not showing remote results
 		const isSearching = query.trim().length > 0;
 		const showingRemote = isSearching && remoteResults.length > 0;
 		if (!loading && hasMore && !showingRemote) {
-			fetchPage(page + 1, false);
+			fetchIdolData(page + 1, false);
 		}
 	};
 
 	const onRefresh = () => {
 		setRefreshing(true);
 		setRemoteResults([]); // clear remote on refresh
-		fetchPage(1, true);
+		fetchIdolData(1, true);
 	};
 
 	const openDetail = (actress) => {
-		// now we only need name to fetch full data in ActressDetailScreen
+		// we only need name to fetch full data in ActressDetailScreen
 		navigation.navigate('ActressDetail', { actressName: actress.name });
 	};
 
@@ -235,12 +268,11 @@ export default function ActressScreen() {
 			const res = await fetch(BASE_SEARCH_NOT_FOUND, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				// Adjust this body to your contract (e.g., { query: q } or { name: q })
 				body: JSON.stringify({
-					"name": q,
-					"updateRecord": true,
-					"reuseSavedFile": true,
-					"displayType": "json"
+					name: q,
+					updateRecord: true,
+					reuseSavedFile: true,
+					displayType: 'json',
 				}),
 			});
 			if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -248,7 +280,6 @@ export default function ActressScreen() {
 			const record = Array.isArray(payload) ? payload[0] : payload;
 			const name = record?.name || record?.jp || null;
 			if (name) {
-				// hand off to detail screen — it will fetch full profile by name
 				navigation.navigate('ActressDetail', { actressName: name });
 			} else {
 				setExternalError('Not found from external sources.');
@@ -281,6 +312,14 @@ export default function ActressScreen() {
 		);
 	};
 
+	const currentFilterLabel = filter === 'none' ? 'None' : 'My Favorite';
+
+	let currentOrderLabel = 'None';
+	if (orderBy === "created_time") currentOrderLabel = "Cre.Time";
+	if (orderBy === "cup") currentOrderLabel = "Cup";
+	if (orderBy === "movies_count") currentOrderLabel = "M.Count";
+	if (orderBy === "Note") currentOrderLabel = "Note";
+
 	return (
 		<View style={styles.container}>
 			{/* Search */}
@@ -296,39 +335,184 @@ export default function ActressScreen() {
 				/>
 			</View>
 
-			{/* Optional search spinner */}
-			{searchLoading ? (
-				<View style={{ paddingHorizontal: 12, paddingBottom: 4 }}>
-					<Text style={{ color: '#9aa4b2', fontSize: 12 }}>Searching in database…</Text>
-				</View>
-			) : null}
+			{/* Filter + Order row */}
+			<View style={styles.filterRow}>
+				{/* Filter dropdown */}
+				<View style={styles.filterWrap}>
+					<View style={{ flexDirection: 'row', alignItems: 'center' }}>
+						<Pressable
+							style={[styles.filterButton, { flex: 1 }]}
+							onPress={() => {
+								setFilterDropdownOpen(open => !open);
+								setOrderDropdownOpen(false);
+							}}
+						>
+							<Text style={styles.filterLabel}>Filter:</Text>
+							<Text style={styles.filterValue}>{currentFilterLabel}</Text>
+							<Text style={styles.filterChevron}>
+								{filterDropdownOpen ? '▲' : '▼'}
+							</Text>
+						</Pressable>
+					</View>
 
-			{/* Grid */}
-			{/* <FlatList
-				key={`grid-${NUM_COLUMNS}`}
-				data={dataToRender}
-				keyExtractor={(item) => item.id}
-				numColumns={NUM_COLUMNS}
-				renderItem={renderItem}
-				columnWrapperStyle={{ columnGap: GUTTER, paddingHorizontal: H_PADDING }}
-				contentContainerStyle={{ rowGap: GUTTER, paddingBottom: 24 }}
-				onEndReachedThreshold={0.4}
-				onEndReached={onEndReached}
-				showsVerticalScrollIndicator={false}
-				refreshControl={
-					<RefreshControl
-						refreshing={refreshing}
-						onRefresh={onRefresh}
-						tintColor="#5b9cff"
-					/>
-				}
-				ListFooterComponent={ListFooter}
-			/> */}
+					{filterDropdownOpen && (
+						<View style={styles.filterDropdown}>
+							<Pressable
+								style={styles.filterOption}
+								onPress={() => {
+									setFilter('none');
+									setFilterDropdownOpen(false);
+								}}
+							>
+								<Text style={[
+									styles.filterOptionText,
+									filter === 'none' &&
+									styles.filterOptionTextActive,
+								]}>
+									None
+								</Text>
+							</Pressable>
+							<Pressable
+								style={styles.filterOption}
+								onPress={() => {
+									setFilter('my_favorite');
+									setFilterDropdownOpen(false);
+								}}
+							>
+								<Text style={[
+									styles.filterOptionText,
+									filter === 'my_favorite' &&
+									styles.filterOptionTextActive,
+								]}>
+									My Favorite
+								</Text>
+							</Pressable>
+						</View>
+					)}
+				</View>
+
+				{/* Order by dropdown + ASC/DESC icon */}
+				<View style={styles.filterWrap}>
+					<View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+						<Pressable
+							style={[styles.filterButton, { flex: 1 }]}
+							onPress={() => {
+								setOrderDropdownOpen(open => !open);
+								setFilterDropdownOpen(false);
+							}}
+						>
+							<Text style={styles.filterLabel}>Order by:</Text>
+							<Text style={styles.filterValue}>{currentOrderLabel}</Text>
+							<Text style={styles.filterChevron}>
+								{orderDropdownOpen ? '▲' : '▼'}
+							</Text>
+						</Pressable>
+
+						{/* ASC/DESC toggle */}
+						<Pressable
+							style={styles.orderDirButton}
+							onPress={() =>
+								setOrderDirection(prev => (prev === 'asc' ? 'desc' : 'asc'))
+							}
+						>
+							<Text style={styles.orderDirText}>
+								{orderDirection === 'asc' ? '↑' : '↓'}
+							</Text>
+						</Pressable>
+					</View>
+
+					{orderDropdownOpen && (
+						<View style={styles.filterDropdown}>
+							<Pressable
+								style={styles.filterOption}
+								onPress={() => {
+									setOrderBy('none');
+									setOrderDropdownOpen(false);
+								}}>
+								<Text style={[
+									styles.filterOptionText,
+									orderBy === 'none' &&
+									styles.filterOptionTextActive
+								]}>
+									None
+								</Text>
+							</Pressable>
+							<Pressable
+								style={styles.filterOption}
+								onPress={() => {
+									setOrderBy('created_time');
+									setOrderDropdownOpen(false);
+								}}>
+								<Text style={[
+									styles.filterOptionText,
+									orderBy === 'created_time' &&
+									styles.filterOptionTextActive,
+								]}>
+									Created time
+								</Text>
+							</Pressable>
+							<Pressable
+								style={styles.filterOption}
+								onPress={() => {
+									setOrderBy('movies_count');
+									setOrderDropdownOpen(false);
+								}}>
+								<Text style={[
+									styles.filterOptionText,
+									orderBy === 'movies_count' &&
+									styles.filterOptionTextActive,
+								]}>
+									Movies count
+								</Text>
+							</Pressable>
+							<Pressable
+								style={styles.filterOption}
+								onPress={() => {
+									setOrderBy('cup');
+									setOrderDropdownOpen(false);
+								}}>
+								<Text style={[
+									styles.filterOptionText,
+									orderBy === 'cup' &&
+									styles.filterOptionTextActive,
+								]}>
+									Cup
+								</Text>
+							</Pressable>
+							<Pressable
+								style={styles.filterOption}
+								onPress={() => {
+									setOrderBy('note');
+									setOrderDropdownOpen(false);
+								}}>
+								<Text style={[
+									styles.filterOptionText,
+									orderBy === 'note' &&
+									styles.filterOptionTextActive,
+								]}>
+									Note
+								</Text>
+							</Pressable>
+						</View>
+					)}
+				</View>
+			</View>
+
+			{/* Optional search spinner */}
+			{searchLoading && (
+				<View style={{ paddingHorizontal: 12, paddingBottom: 4 }}>
+					<Text style={{ color: '#9aa4b2', fontSize: 12 }}>
+						Searching in database…
+					</Text>
+				</View>
+			)}
 
 			{/* Results or empty state with external fetch */}
 			{query.trim().length > 0 && !searchLoading && dataToRender.length === 0 ? (
 				<View style={styles.emptyWrap}>
-					{!searchLoading && <Text style={styles.emptyText}>Actress not found</Text>}
+					{!searchLoading && (
+						<Text style={styles.emptyText}>Actress not found</Text>
+					)}
 					<Pressable
 						style={[styles.externalBtn, externalLoading && { opacity: 0.7 }]}
 						onPress={fetchFromInternet}
@@ -370,6 +554,7 @@ export default function ActressScreen() {
 
 const styles = StyleSheet.create({
 	container: { flex: 1, backgroundColor: '#0f1115' },
+
 	searchWrap: { padding: 12 },
 	search: {
 		backgroundColor: '#151922',
@@ -380,6 +565,85 @@ const styles = StyleSheet.create({
 		borderWidth: 1,
 		borderColor: '#1f2430',
 	},
+
+	/* Filter + Order */
+	filterRow: {
+		flexDirection: 'row',
+		paddingHorizontal: 12,
+		gap: 8,
+		marginBottom: 4,
+	},
+	filterWrap: {
+		flex: 1,
+		position: 'relative', // for overlay dropdown
+	},
+	filterButton: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		backgroundColor: '#151922',
+		borderRadius: 10,
+		borderWidth: 1,
+		borderColor: '#1f2430',
+		paddingHorizontal: 10,
+		paddingVertical: 8,
+	},
+	filterLabel: {
+		color: '#9aa4b2',
+		fontSize: 13,
+		marginRight: 6,
+	},
+	filterValue: {
+		color: '#e7ecf3',
+		fontSize: 13,
+		fontWeight: '600',
+		flex: 1,
+	},
+	filterChevron: {
+		color: '#9aa4b2',
+		fontSize: 12,
+	},
+	filterDropdown: {
+		position: 'absolute',
+		top: '100%',
+		left: 0,
+		right: 0,
+		marginTop: 4,
+		backgroundColor: '#151922',
+		borderRadius: 10,
+		borderWidth: 1,
+		borderColor: '#1f2430',
+		overflow: 'hidden',
+		zIndex: 20,
+		elevation: 4,
+	},
+	filterOption: {
+		paddingHorizontal: 12,
+		paddingVertical: 8,
+	},
+	filterOptionText: {
+		color: '#9aa4b2',
+		fontSize: 13,
+	},
+	filterOptionTextActive: {
+		color: '#e7ecf3',
+		fontWeight: '700',
+	},
+	orderDirButton: {
+		width: 32,
+		height: 32,
+		borderRadius: 8,
+		backgroundColor: '#151922',
+		borderWidth: 1,
+		borderColor: '#1f2430',
+		alignItems: 'center',
+		justifyContent: 'center',
+	},
+	orderDirText: {
+		color: '#e7ecf3',
+		fontSize: 14,
+		fontWeight: '700',
+	},
+
 	card: { width: CARD_W, alignItems: 'center' },
 	avatar: {
 		width: CARD_W,
@@ -396,6 +660,7 @@ const styles = StyleSheet.create({
 		width: '100%',
 	},
 	meta: { color: '#9aa4b2', fontSize: 12, marginTop: 2, textAlign: 'center' },
+
 	// Empty state + external search
 	emptyWrap: {
 		alignItems: 'center',

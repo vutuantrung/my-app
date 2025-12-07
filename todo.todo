@@ -1,8 +1,8 @@
-[] set search movie with character "_" from at beginning of code
 [] check sometimes javher return a video with no dvdId
 [] download video preview from https://missav.ws/
-[] idol not found in 3 webs but still saved in db
 [] match the movie-code with the idol actress special name (maybe match with javher queryname)
-[] case jp js of iamges
+[] case jp js of images
+[ok] set search movie with character "_" from at beginning of code
+[ok] idol not found in 3 webs but still saved in db
 [ok] inverse name for avatar
 [ok] rework the image-thumbnails of videos

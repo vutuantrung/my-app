@@ -2,20 +2,19 @@ const fs = require("fs");
 
 const allCodes = [];
 (() => {
-    const files = fs.readdirSync("database/movie-thumbs");
-    console.log(files.length);
-    const REG = /(?<code>.*)-thumbs-cover\.jpg/;
+	const files = fs.readdirSync("database/movie-thumbs");
+	console.log(files.length);
+	const REG = /(?<code>.*)-thumbs-cover\.jpg/;
 
-    for (const file of files) {
-        if (!REG.test(file)) continue;
+	for (const file of files) {
+		if (!REG.test(file)) continue;
 
-        const regSegs = REG.exec(file);
-        const code = regSegs.groups["code"];
-        if (code.length === "ba5db2a7d0fb56ea476c7d29537b33cb".length) continue;
-        allCodes.push(code);
-    }
+		const regSegs = REG.exec(file);
+		const code = regSegs.groups["code"];
+		if (code.length === "ba5db2a7d0fb56ea476c7d29537b33cb".length) continue;
+		allCodes.push(code);
+	}
 })()
-console.log(allCodes.length);
 
 const sqlite3 = require('sqlite3').verbose();
 
@@ -27,48 +26,47 @@ const sqlite3 = require('sqlite3').verbose();
  * @returns {Promise<Object[]>} Array of movie records with { code, metadata }
  */
 function fetchMovieMetadata(dbPath, codeList) {
-    return new Promise((resolve, reject) => {
-        if (!Array.isArray(codeList) || codeList.length === 0) {
-            return resolve([]); // No codes, return empty result
-        }
+	return new Promise((resolve, reject) => {
+		if (!Array.isArray(codeList) || codeList.length === 0) {
+			return resolve([]); // No codes, return empty result
+		}
 
-        const db = new sqlite3.Database(dbPath, (err) => {
-            if (err) return reject(err);
-        });
+		const db = new sqlite3.Database(dbPath, (err) => {
+			if (err) return reject(err);
+		});
 
-        // Generate placeholders (?, ?, ?, ...)
-        const placeholders = codeList.map(() => '?').join(',');
+		// Generate placeholders (?, ?, ?, ...)
+		const placeholders = codeList.map(() => '?').join(',');
 
-        // Using COLLATE NOCASE for case-insensitive matching
-        const query = `SELECT code, metadata FROM movie WHERE code COLLATE NOCASE IN (${placeholders});`;
-        db.all(query, codeList, (err, rows) => {
-            db.close();
+		// Using COLLATE NOCASE for case-insensitive matching
+		const query = `SELECT code, metadata FROM movie WHERE code COLLATE NOCASE IN (${placeholders});`;
+		db.all(query, codeList, (err, rows) => {
+			db.close();
 
-            if (err) return reject(err);
-            resolve(rows);
-        });
-    });
+			if (err) return reject(err);
+			resolve(rows);
+		});
+	});
 }
 
 // Example usage
 (async () => {
-    const dbPath = './database/my-db';
-    const codes = allCodes; // mixed case input
+	const dbPath = './database/my-db';
+	const codes = allCodes; // mixed case input
 
-    try {
-        const results = await fetchMovieMetadata(dbPath, codes);
-        const data = results.map(e => {
-            let contentId = "--------";
-            if (e.metadata) {
-                const metaData = JSON.parse(e.metadata);
-                contentId = metaData.content_id;
-            }
-            return contentId + "<>" + e.code;
-        })
-        console.log('Data:', data);
-    } catch (error) {
-        console.error('Error fetching metadata:', error);
-    }
+	try {
+		const results = await fetchMovieMetadata(dbPath, codes);
+		const data = results.map(e => {
+			let contentId = "--------";
+			if (e.metadata) {
+				const metaData = JSON.parse(e.metadata);
+				contentId = metaData.content_id;
+			}
+			return contentId + "<>" + e.code;
+		})
+	} catch (error) {
+		console.error('Error fetching metadata:', error);
+	}
 })();
 
 

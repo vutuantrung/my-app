@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { searchIdol, getPagination, searchIdolByMyFavorite, searchIdolsByNameLike, searchIdolByExactName } = require("../controllers/idol.controller");
+const { searchIdol, getPagination, searchIdolByMyFavorite, searchIdolsByNameLike, searchIdolByExactName, setMyFavorite } = require("../controllers/idol.controller");
 
 // READ ALL + optional ?name= filter
 router.get('/', getPagination);
@@ -25,6 +25,7 @@ router.delete('/:id', (req, res) => {
 
 // SEARCH
 router.post('/search', searchIdol);
+router.post('/my-favorite', setMyFavorite);
 
 router.post('/test', async (req, res) => {
 	res.send("wanna test something ?");

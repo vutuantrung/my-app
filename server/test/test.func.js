@@ -433,7 +433,6 @@ async function assignContentIdSamples() {
 	const movieDbService = require("../services/movie.service.database.js");
 
 	const allFiles = fs.readdirSync(filesPath);
-	console.log(allFiles.length)
 	for (const f of allFiles) {
 		const isJSONFile = f.toLowerCase().endsWith(".json");
 		if (!isJSONFile) continue;
