@@ -40,13 +40,12 @@ async function checkNameJAVDbExist(name, proxyService) {
 // 7. download avatar
 // 8. query name
 async function crawlIdolJAVDatabase(name, recrawl = false) {
-	console.log("\n[JAVDATABASE]---------------");
+	console.log("\n[JAVDATABASE]---------------", name);
 
 	const RETRY_TIMES = 3;
 	const data = {};
 	let htmlContentRoot = null;
 	const proxyService = new ProxyRotator("round-robin");
-	console.log('[JAVDATABASE]', name);
 	const queryName = name[0] === "_"
 		? name.slice(1)
 		: await checkNameJAVDbExist(name, proxyService);
@@ -94,7 +93,7 @@ async function crawlIdolJAVDatabase(name, recrawl = false) {
 	if (modelInfoNode) {
 		const newHtmlContent = modelInfoNode.innerHTML.replaceAll("\t-", "").replaceAll("\t", "")
 		const allTexts = extractText(parse(newHtmlContent));
-
+		console.log('[modelInfoNode]', allTexts)
 		treatedAttr.push(allTexts[0]);
 		for (let i = 1; i < allTexts.length; i++) {
 			if (!allTexts[i].includes("[*]")) continue;
@@ -122,13 +121,14 @@ async function crawlIdolJAVDatabase(name, recrawl = false) {
 			const [a, v] = treatedAttr[i].replace("[*]", "").split(":");
 			data[a.replace(" ", "_").toLowerCase()] = v;
 		}
+
+		console.log('[modelInfoNode]', data)
 	}
 
 	// 3. Rating data
 	const ratingNode = root?.querySelector("div[class='post-ratings']");
 	if (ratingNode) {
 		const allTexts = extractText(ratingNode);
-		// console.log(allTexts)
 		const note = allTexts[0] === "(No Ratings Yet)"
 			? "(No Ratings Yet)"
 			: allTexts.join(" ").replace(")", "").split("average:")[1].replace(" out of ", "/").trim();
@@ -172,7 +172,7 @@ async function crawlIdolJAVDatabase(name, recrawl = false) {
 		console.log("Idol's avatar downloaded failed.");
 	}
 
-	console.log("✅ Page crawled succcessfully!");
+	console.log("✅ Page crawled succcessfully!", data);
 
 	return data;
 }
@@ -210,7 +210,7 @@ async function checkNameJAVHerExist(name, proxyService) {
 // 1. movies data
 // 2. movies_count
 // 3. query name
-async function crawlIdolFromJAVHer(name, recrawl = false) {
+async function crawlIdolFromJAVHer(names, recrawl = false) {
 	console.log("\n[JAVHer]---------------");
 
 	let timeWait = 2000;
@@ -219,120 +219,120 @@ async function crawlIdolFromJAVHer(name, recrawl = false) {
 	const data = {};
 	const proxyService = new ProxyRotator("random");
 
-	// 1. Detect query name
-	const checkResult = name[0] === "_"
-		? { queryName: name.slice(1), count: 0 }
-		: await checkNameJAVHerExist(name, proxyService);
-	if (!checkResult) {
-		console.log("❌ JAVHer info not found", name);
-		return null;
-	}
+	const allNames = names.split("|");
+	for (const name of allNames) {
+		// 1. Detect query name
+		const checkResult = name[0] === "_"
+			? { queryName: name.slice(1), count: 0 }
+			: await checkNameJAVHerExist(name, proxyService);
+		if (!checkResult) {
+			console.log("❌ JavHer info not found", name);
+			return null;
+		}
 
-	const { queryName, count } = checkResult;
-	if (count < 200) timeWait = 100;
+		const { queryName, count } = checkResult;
+		console.log("🎉 JavHer info found", queryName);
+		if (count < 200) timeWait = 100;
 
-	// 2. Collect movies
-	let pageCount = 0,
-		jsonDataString = null,
-		jsonData = null,
-		fileExisted = false;
+		// 2. Collect movies
+		let pageCount = 0,
+			jsonDataString = null,
+			jsonData = null,
+			fileExisted = false;
 
-	if (!data.movies_count) data.movies_count = 0;
-	if (!data.queryName) data.queryName = "";
-	if (!data.movies) data.movies = [];
+		if (!data.movies_count) data.movies_count = 0;
+		if (!data.queryName) data.queryName = "";
+		if (!data.movies) data.movies = [];
 
-	while (true) {
-		try {
-			const jsonFilePath = path.join(CACHED_FOLDER, queryName + "_movie_" + pageCount + ".json");
-			const url = `https://javher.com/api/casts/${queryName}?page=${pageCount}&mode=all`;
-			fileExisted = fs.existsSync(jsonFilePath);
-			if (fs.existsSync(jsonFilePath) && !recrawl) {
-				console.log("📌 File already exists:", jsonFilePath);
-				jsonDataString = fs.readFileSync(jsonFilePath, "utf-8");
-				jsonData = JSON.parse(jsonDataString);
-			} else {
-				console.log("🔥 Fetching api url:", url);
-				const headers = {
-					'Accept': 'application/json',
-					'Authorization': 'HAHA_ADAM_HAVE_TO_RESORT_TO_THIS#@!@#',
-					'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36',
-					'Cookie': 'user-country=USN'
-				}
-				jsonData = await fetchWithRetry(url, headers, proxyService, RETRY_TIMES);
-			}
-
-			if (!jsonData) {
-				console.log("Fetch data failed after retry", RETRY_TIMES, "times");
-				break;
-			}
-			if (jsonData) fs.writeFileSync(jsonFilePath, JSON.stringify(jsonData));
-
-			const { success: fetchedSuccess, videos: fetchedVideos, count: moviesCount } = jsonData;
-			// console.log('[jsonData]', jsonData);
-
-			if (!fetchedSuccess) {
-				console.log("Fetch failed:", jsonData);
-				break;
-			}
-
-			if (Array.isArray(fetchedVideos) && fetchedVideos.length === 0) {
-				console.log("Videos final page reached! Number of videos collected:", jsonData.count);
-				break;
-			}
-
-			// set query name
-			data.queryName = queryName;
-			// set movies count
-			data.movies_count += parseInt(moviesCount);
-			// set movies
-			const videos = fetchedVideos.map(m => {
-				const releaseDate2 = new Date(m.releaseDate);
-				const movieLink = `https://javher.com/api/video/watch-${m.contentId}-${releaseDate2.getTime()}`
-				return {
-					code: m.dvdId?.toLowerCase(),
-					movieLink: movieLink,
-					thumbsShort: m.image.replace("pl.", "ps."),
-					thumbs: m.image,
-					desc: "",
-					releaseDate: m.releaseDate.split("T")[0],
-					title: m.title,
-					genres: null,
-					studio: null,
-					trailer: null,
-					runtime: m.duration + " min",
-					favorite: null,
-					actress: null,
-					note: null,
-					metadata: {
-						content_id: m.contentId.toLowerCase(),
-						jpTitle: m.jpTitle,
-						zhTitle: m.zhTitle
+		while (true) {
+			try {
+				const jsonFilePath = path.join(CACHED_FOLDER, queryName + "_movie_" + pageCount + ".json");
+				const url = `https://javher.com/api/casts/${queryName}?page=${pageCount}&mode=all`;
+				fileExisted = fs.existsSync(jsonFilePath);
+				if (fs.existsSync(jsonFilePath) && !recrawl) {
+					console.log("📌 File already exists:", jsonFilePath);
+					jsonDataString = fs.readFileSync(jsonFilePath, "utf-8");
+					jsonData = JSON.parse(jsonDataString);
+				} else {
+					console.log("🔥 Fetching api url:", url);
+					const headers = {
+						'Accept': 'application/json',
+						'Authorization': 'HAHA_ADAM_HAVE_TO_RESORT_TO_THIS#@!@#',
+						'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36',
+						'Cookie': 'user-country=USN'
 					}
+					jsonData = await fetchWithRetry(url, headers, proxyService, RETRY_TIMES);
 				}
-			});
-			data.movies.push(...videos);
 
-		} catch (error) {
-			console.log(jsonData.videos);
-			console.error(error);
-		} finally {
-			pageCount++;
-			if (!fileExisted) {
-				await sleep(timeWait);// Prevent rushing request call
+				if (!jsonData) {
+					console.log("Fetch data failed after retry", RETRY_TIMES, "times");
+					break;
+				}
+				if (jsonData) fs.writeFileSync(jsonFilePath, JSON.stringify(jsonData));
+
+				const { success: fetchedSuccess, videos: fetchedVideos, count: moviesCount } = jsonData;
+				// console.log('[jsonData]', jsonData);
+
+				if (!fetchedSuccess) {
+					console.log("Fetch failed:", jsonData);
+					break;
+				}
+
+				if (Array.isArray(fetchedVideos) && fetchedVideos.length === 0) {
+					console.log("Videos final page reached! Number of videos collected:", jsonData.count);
+					break;
+				}
+
+				// set query name
+				data.queryName = queryName;
+				// set movies count
+				data.movies_count += parseInt(moviesCount);
+				// set movies
+				const videos = fetchedVideos.map(m => {
+					const releaseDate2 = new Date(m.releaseDate);
+					const movieLink = `https://javher.com/api/video/watch-${m.contentId}-${releaseDate2.getTime()}`
+					return {
+						code: m.dvdId?.toLowerCase(),
+						movieLink: movieLink,
+						thumbsShort: m.image.replace("pl.", "ps."),
+						thumbs: m.image,
+						desc: "",
+						releaseDate: m.releaseDate.split("T")[0],
+						title: m.title,
+						genres: null,
+						studio: null,
+						trailer: null,
+						runtime: m.duration + " min",
+						favorite: null,
+						actress: null,
+						note: null,
+						metadata: {
+							content_id: m.contentId.toLowerCase(),
+							jpTitle: m.jpTitle,
+							zhTitle: m.zhTitle
+						}
+					}
+				});
+				data.movies.push(...videos);
+
+			} catch (error) {
+				console.log(jsonData.videos);
+				console.error(error);
+			} finally {
+				pageCount++;
+				if (!fileExisted) {
+					await sleep(timeWait);// Prevent rushing request call
+				}
 			}
 		}
+
+		// Cache json data
+		// const fileJsonPath = path.join(CACHED_FOLDER, name + ".json");
+		// fs.writeFileSync(fileJsonPath, JSON.stringify(data));
 	}
-
-	// Cache json data
-	// const fileJsonPath = path.join(CACHED_FOLDER, name + ".json");
-	// fs.writeFileSync(fileJsonPath, JSON.stringify(data));
-
 	console.log("✅ Page crawled succcessfully!");
 
 	return data;
 }
 
 module.exports = { crawlIdolJAVDatabase, crawlIdolFromJAVHer }
-
-// crawlIdolJAVDatabase("yuina-taki").then(res => { console.log('[res]', res); }).catch(err => { console.log('[err]', err); })
-// crawlIdolFromJAVHer("taki-yuina").then(res => { console.log('[res]', res.queryName); }).catch(err => { console.log('[err]', err); })

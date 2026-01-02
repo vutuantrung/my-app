@@ -1,4 +1,5 @@
-import React from 'react';
+// screens/NotificationsScreen.js
+import React, { useState, useEffect } from 'react';
 import {
 	View,
 	Text,
@@ -7,34 +8,53 @@ import {
 	SafeAreaView,
 } from 'react-native';
 import { useNotifications } from '../contexts/NotificationContext';
+import { useNavigation } from '@react-navigation/native';
+import NotificationItemMovieCard from '../components/NotificationItemMovieCard';
+import NotificationItemOtherCard from '../components/NotificationItemOtherCard';
+import NotificationItemActressCard from '../components/NotificationItemActressCard';
+import NotificationItemMoviesCard from '../components/NotificationItemMoviesCard';
+
+// Helper: derive kind (movie/actress/other) and tag (created/updated)
+function deriveKindAndTag(notification) {
+	const type = (notification.messageType || '').toUpperCase();
+	const [itemType, actionType] = type.toLowerCase().split(".");
+	const data = notification.data || {};
+	const kind = ["movie", "movies", "actress", "actresses"].includes(itemType) ? itemType : "other";
+
+	let tag = data.action;
+	if (!tag) {
+		if (
+			type.includes('created') ||
+			type.includes('added') ||
+			type.includes('new')
+		) {
+			tag = 'created';
+		} else if (type.includes('updated') || type.includes('update')) {
+			tag = 'updated';
+		} else {
+			tag = null;
+		}
+	}
+
+	const result = { kind, tag: actionType };
+	return result;
+}
 
 function NotificationsScreen() {
 	const { notifications, markAllAsRead, markAsRead } = useNotifications();
+	const navigation = useNavigation();
 
-	const renderItem = ({ item }) => (
-		<TouchableOpacity
-			style={{
-				paddingHorizontal: 16,
-				paddingVertical: 10,
-				backgroundColor: item.read ? 'white' : '#f7f9ff',
-			}}
-			onPress={() => {
-				markAsRead(item.id);
-				// TODO: deep-link to movie/actress based on item.data if you want
-			}}
-		>
-			<Text style={{ fontSize: 15, fontWeight: '600' }}>{item.title}</Text>
-			<Text style={{ fontSize: 13, color: '#666', marginTop: 2 }}>
-				{item.message}
-			</Text>
-			<Text style={{ fontSize: 11, color: '#999', marginTop: 4 }}>
-				{new Date(item.createdAt).toLocaleString()}
-			</Text>
-		</TouchableOpacity>
-	);
+	const renderItem = ({ item }) => {
+		// console.log("[meta]", item)
+		const meta = deriveKindAndTag(item);
+		if (meta.kind === 'movie') return NotificationItemMovieCard(item, meta, markAsRead, navigation);
+		if (meta.kind === 'movies') return NotificationItemMoviesCard(item, meta, markAsRead);
+		if (meta.kind === 'actress') return NotificationItemActressCard(item, meta, markAsRead, navigation);
+		return NotificationItemOtherCard(item, markAsRead);
+	};
 
 	return (
-		<SafeAreaView style={{ flex: 1 }}>
+		<SafeAreaView style={{ flex: 1, backgroundColor: '#0f1115' }}>
 			<View
 				style={{
 					paddingHorizontal: 16,
@@ -44,7 +64,9 @@ function NotificationsScreen() {
 					alignItems: 'center',
 				}}
 			>
-				<Text style={{ fontSize: 18, fontWeight: '700' }}>Notifications</Text>
+				<Text style={{ fontSize: 18, fontWeight: '700', color: '#e7ecf3' }}>
+					Notifications
+				</Text>
 				{notifications.length > 0 && (
 					<TouchableOpacity onPress={markAllAsRead}>
 						<Text style={{ fontSize: 13, color: '#007AFF' }}>
@@ -56,11 +78,12 @@ function NotificationsScreen() {
 
 			<FlatList
 				data={notifications}
-				keyExtractor={(item) => item.id}
+				keyExtractor={(item) => (item.id)}
 				ItemSeparatorComponent={() => (
-					<View style={{ height: 1, backgroundColor: '#eee' }} />
+					<View style={{ height: 4 }} />
 				)}
 				renderItem={renderItem}
+				contentContainerStyle={{ paddingBottom: 16, paddingTop: 4 }}
 			/>
 		</SafeAreaView>
 	);

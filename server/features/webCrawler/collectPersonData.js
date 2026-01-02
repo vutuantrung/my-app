@@ -49,7 +49,6 @@ async function crawlIdolJAVDatabase(name, recrawl = false) {
 	const data = {};
 	let htmlContentRoot = null;
 	const proxyService = new ProxyRotator("round-robin");
-	console.log('[JAVDATABASE]', name);
 	const queryName = name[0] === "_"
 		? name.slice(1)
 		: await checkNameJAVDbExist(name, proxyService);
@@ -92,6 +91,7 @@ async function crawlIdolJAVDatabase(name, recrawl = false) {
 		data.avatar = avatarImgSrc.getAttribute("src");
 	}
 
+	console.log(".................")
 	// 2. Personal data
 	const modelInfoNode = root?.querySelector("h1[class='idol-name']")?.parentNode;
 	if (modelInfoNode) {
@@ -131,7 +131,7 @@ async function crawlIdolJAVDatabase(name, recrawl = false) {
 	const ratingNode = root?.querySelector("div[class='post-ratings']");
 	if (ratingNode) {
 		const allTexts = extractText(ratingNode);
-		// console.log(allTexts)
+
 		const note = allTexts[0] === "(No Ratings Yet)"
 			? "(No Ratings Yet)"
 			: allTexts.join(" ").replace(")", "").split("average:")[1].replace(" out of ", "/").trim();
@@ -151,6 +151,7 @@ async function crawlIdolJAVDatabase(name, recrawl = false) {
 	const biographyNode = root?.querySelector("div[id='biography']");
 	if (biographyNode) {
 		const allTexts = extractText(biographyNode);
+		console.log('[allTexts]', allTexts)
 		const fullText = allTexts.map(e => e.trim().replaceAll("\r", "").replaceAll("\t", "").replaceAll("\n", "")).join(" ");
 		const bioData = fullText.split(".").map(e => e.trim()).filter(e => e)
 		const reg = /(.*) has starred in ([0-9]*) movies/;
@@ -163,6 +164,7 @@ async function crawlIdolJAVDatabase(name, recrawl = false) {
 	const tagsContainerElement = root?.querySelector("h1[class='idol-name']")?.parentNode;
 	if (tagsContainerElement) {
 		const rawNameTags = extractRawNamesIdol(tagsContainerElement);
+		console.log('[rawNameTags]', rawNameTags)
 		data.tags = rawNameTags;
 	}
 
@@ -227,9 +229,10 @@ async function crawlIdolFromJAVHer(name, recrawl = false) {
 		? { queryName: name.slice(1), count: 0 }
 		: await checkNameJAVHerExist(name, proxyService);
 	if (!checkResult) {
-		console.log("❌ JAVHer info not found", name);
+		console.log("❌ JavHer info not found", name);
 		return null;
 	}
+	console.log("🎉 JavHer info found", queryName);
 
 	const { queryName, count } = checkResult;
 	if (count < 200) timeWait = 100;
@@ -409,8 +412,8 @@ async function crawlModelFromMisskon(name, recrawl = false) {
 			const root = parse(htmlContentRoot);
 			if (!root.albums) root.albums = [];
 
-			const title = root.querySelector("title");
-			const pageNotFound = title.innerText === "404 | Lost in the Shadows";
+			const title = root.getElementsByTagName("h1")[0];
+			const pageNotFound = title.innerText === "404";
 			if (pageNotFound) {
 				console.log("Reach end of pages. End!");
 				break;

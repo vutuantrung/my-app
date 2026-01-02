@@ -27,8 +27,4 @@ router.delete('/:id', (req, res) => {
 router.post('/search', searchIdol);
 router.post('/my-favorite', setMyFavorite);
 
-router.post('/test', async (req, res) => {
-	res.send("wanna test something ?");
-})
-
 module.exports = router;

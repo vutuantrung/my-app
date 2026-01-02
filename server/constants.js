@@ -1,7 +1,7 @@
 const path = require("path");
 const SERVER_FOLDER_PATH = process.cwd();
 
-const EXTERNAL_DB_PATH = "G:";
+const DATABASE_FOLDER = path.join(SERVER_FOLDER_PATH, "database");
 const IDOL_AVATAR_FOLDER = path.join(SERVER_FOLDER_PATH, "database", "idol-avatars");
 const MODEL_AVATAR_FOLDER = path.join(SERVER_FOLDER_PATH, "database", "model-avatars");
 const MOVIE_THUMBS_FOLDER = path.join(SERVER_FOLDER_PATH, "database", "movie-thumbs");
@@ -11,6 +11,7 @@ const BAT_FOLDER = "C:/Users/trung/Documents/CSProjects/Personal-Project/NodeJS/
 
 module.exports = {
 	BAT_FOLDER,
+	DATABASE_FOLDER,
 	SERVER_FOLDER_PATH,
 	IDOL_AVATAR_FOLDER,
 	MODEL_AVATAR_FOLDER,

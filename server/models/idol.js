@@ -57,14 +57,7 @@ async function getIdolsPaginated(options = {}) {
 	const sliceParams = params.slice();
 	sliceParams.push(pageSize, offset);
 
-	const sql = `
-    SELECT *
-    FROM idol_profile
-    ${whereSql}
-    ORDER BY ${sort} ${order}, id ASC
-    LIMIT ? OFFSET ?
-  `;
-
+	const sql = `SELECT * FROM idol_profile ${whereSql} ORDER BY ${sort} ${order}, id ASC LIMIT ? OFFSET ?`;
 	const rows = await new Promise((resolve, reject) => {
 		db.all(sql, sliceParams, (err, arr) => {
 			if (err) return reject(err);

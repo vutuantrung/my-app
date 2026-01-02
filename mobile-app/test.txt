@@ -1,6 +1,3 @@
-create a new page call ActressDetailJJGirlScreen, 
-this page is an gallery that contains:
-- pagination
-- 3 columns of the photos
-- each photo url is built by the page number and an index (from 1 - 12)
-- the ActressDetailJJGirlScreen is navigated from ActressDetailScreen, but with condition (for the moment, create a useState boolean and i will define the condition later)
+lets update the NotificationScreen, add new type of notification:
+- multiple movies added/updated: display an item card which includes: number of movies, their codes (if the number passes 10, the rest will be showed +<number left>), their thumbs displayed horizontally (if the number passes 10, the rest will be showed +<number left>), a tag (created and updated), date added, no need to add navigation
+- multiple movies added/updated: display an item card which includes: number of movies, their codes (if the number passes 10, the rest will be showed +<number left>), their thumbs displayed horizontally (if the number passes 10, the rest will be showed +<number left>), a tag (created and updated), date added

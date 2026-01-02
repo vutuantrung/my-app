@@ -108,7 +108,9 @@ function extractActresses(meta) {
 export default function FilmDetailScreen() {
 	const navigation = useNavigation();
 	const route = useRoute();
-	const { contentId, code } = route?.params || {};
+	// console.log('[route.params]', route.params.film)
+	const [code, setCode] = React.useState(code || null);
+	const [contentId, setContentId] = React.useState(contentId || null);
 
 	const [state, setState] = React.useState({
 		loading: true,
@@ -140,11 +142,8 @@ export default function FilmDetailScreen() {
 			}
 			const movieData = await res.json();
 
-			console.log(movieData)
-
 			const meta = safeParseJSON(movieData.metadata);
 			const images = splitImages(movieData.images);
-
 			const film = {
 				id: movieData.id,
 				code: movieData.code,
@@ -169,7 +168,7 @@ export default function FilmDetailScreen() {
 					: [],
 				director: meta.director || null,
 				actresses: movieData.idols.map(name => ({
-					name: formatName(name),
+					name: name,
 					avatar: `${BASE_URL}/images/idol-avatars/${name}-avatar.jpg`
 				})),
 				previewUrl,
@@ -192,7 +191,11 @@ export default function FilmDetailScreen() {
 
 	/* ---------------------- Update Film (external fetch) ---------------------- */
 	const handleUpdateFilm = async () => {
-		if (!code && !contentId) return;
+		console.log('Updating film with', { code, contentId });
+		if (!code && !contentId) {
+			console.log('No code or contentId provided for update');
+			return;
+		}
 
 		setUpdating(true);
 		setUpdateError(null);
@@ -200,12 +203,11 @@ export default function FilmDetailScreen() {
 		try {
 			// This mirrors the "Search on internet" save behavior in FilmScreen:
 			// hitting the movie search endpoint with updateRecord to force external fetch + save.
-			const res = await fetch(`${BASE_URL}/api/movie/search`, {
+			const res = await fetch(`${BASE_URL}/api/identify/search`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
-					code: code || '',
-					contentId: contentId || '',
+					identify: code || contentId || '',
 					updateRecord: true,
 					reuseSavedFile: true,
 					displayType: 'json',
@@ -213,8 +215,16 @@ export default function FilmDetailScreen() {
 			});
 
 			if (!res.ok) {
+				console.log("not ok")
 				throw new Error(`HTTP ${res.status}`);
 			}
+
+			const data = await res.json();
+			if (data.error) {
+				throw new Error(data.error);
+			}
+			setCode(data.code || code);
+			setContentId(data.contentId || contentId);
 
 			// We don't need the body here, but you can inspect if needed:
 			// const payload = await res.json();
@@ -273,9 +283,9 @@ export default function FilmDetailScreen() {
 
 	const scenes = film.images || [];
 	const isTitleMissing =
-		!film.title || !String(film.title).trim() || film.title === 'undefined';
-
-	console.log(isTitleMissing)
+		!film.title ||
+		!String(film.title).trim() ||
+		film.title === 'undefined';
 
 	/* ---------------------- Special case: title missing ---------------------- */
 	if (isTitleMissing) {
@@ -317,7 +327,7 @@ export default function FilmDetailScreen() {
 	}
 
 	/* ---------------------- Normal full-detail layout ---------------------- */
-
+	console.log('[actresses]', film.actresses)
 	return (
 		<ScrollView
 			style={styles.container}
@@ -364,13 +374,25 @@ export default function FilmDetailScreen() {
 						contentContainerStyle={styles.actressAvatarRow}
 					>
 						{film.actresses.map((actress, index) => (
-							<View key={`${actress.name}-${index}`} style={styles.actressAvatarWrap}>
+							<Pressable
+								key={`${actress.name}-${index}`}
+								style={styles.actressAvatarWrap}
+								onPress={() =>
+									navigation.navigate('ActressDetail', {
+										actressName: actress.name,
+									})
+								}
+								hitSlop={8}
+							>
 								<SafeImage
 									uri={actress.avatar}
 									style={styles.actressAvatar}
 									defaultSource={DEFAULT_AVATAR}
 								/>
-							</View>
+								<Text style={styles.actressName} numberOfLines={1}>
+									{formatName(actress.name)}
+								</Text>
+							</Pressable>
 						))}
 					</ScrollView>
 				</View>
@@ -547,11 +569,18 @@ const styles = StyleSheet.create({
 	},
 	actressAvatarWrap: {
 		marginRight: 10,
+		alignItems: 'center',
 	},
 	actressAvatar: {
 		width: 60,
 		height: 60,
 		borderRadius: 30,
 		backgroundColor: '#151922',
+	},
+	actressName: {
+		color: '#e7ecf3',
+		fontSize: 12,
+		marginTop: 6,
+		maxWidth: 80,
 	},
 });

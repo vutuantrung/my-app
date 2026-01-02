@@ -1,14 +1,14 @@
 const proxyIps = `
 142.111.48.253:7030:skjpdwdk:wbf5e31thcpw
-31.59.20.176:6754:skjpdwdk:wbf5e31thcpw
 23.95.150.145:6114:skjpdwdk:wbf5e31thcpw
 198.23.239.134:6540:skjpdwdk:wbf5e31thcpw
-45.38.107.97:6014:skjpdwdk:wbf5e31thcpw
 107.172.163.27:6543:skjpdwdk:wbf5e31thcpw
 198.105.121.200:6462:skjpdwdk:wbf5e31thcpw
 64.137.96.74:6641:skjpdwdk:wbf5e31thcpw
+84.247.60.125:6095:skjpdwdk:wbf5e31thcpw
 216.10.27.159:6837:skjpdwdk:wbf5e31thcpw
-142.111.67.146:5611:skjpdwdk:wbf5e31thcpw
+23.26.71.145:5628:skjpdwdk:wbf5e31thcpw
+23.27.208.120:5830:skjpdwdk:wbf5e31thcpw
 `;
 // proxy-rotator.js
 // Install dependencies: npm i axios http-proxy-agent https-proxy-agent

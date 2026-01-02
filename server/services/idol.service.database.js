@@ -5,7 +5,6 @@ const columns = ["name", "dob", "measurements", "height", "country", "cup", "mov
 
 const IDOL_SORT_COLUMNS = new Set(["id", "cup", "note", "name", "created_time", "updated_time", "movies_count"]);
 function normalizeIdolSort(sort) {
-	console.log(sort)
 	const s = String(sort || "name").toLowerCase();
 	return IDOL_SORT_COLUMNS.has(s) ? s : "name";
 }
@@ -90,8 +89,24 @@ async function searchIdolByMyFavorite() {
 	});
 }
 
+async function searchIdolsByAliasName(name) {
+	return new Promise((resolve, reject) => {
+		const aliasName = name.trim();
+		const sqlCommand = `SELECT * FROM idol_profile WHERE alias IS NOT NULL AND (',' || alias || ',') LIKE ?`;
+		// token-safe pattern: %,name,%
+		const params = [`%,${aliasName},%`];
+		db.all(sqlCommand, params, (err, rows) => {
+			if (err) {
+				console.error('[searchIdolsByAliasName]', err.message);
+				return reject(err);
+			}
+			resolve({ data: rows || [] });
+		});
+	});
+}
+
+
 async function searchIdolsPaginated(options = {}) {
-	console.log(options)
 	const page = clamp(parseInt(options.page || 1, 10) || 1, 1, 1e9);
 	const pageSize = clamp(parseInt(options.pageSize || 20, 10) || 20, 1, 200);
 	const sort = normalizeIdolSort(options.sortBy);
@@ -127,7 +142,6 @@ async function searchIdolsPaginated(options = {}) {
 	sliceParams.push(pageSize, offset);
 
 	const sql = `SELECT id, name, movies_count FROM idol_profile ${whereSql} ORDER BY ${sort} ${order}, id ASC LIMIT ? OFFSET ?`;
-	console.log(sql)
 	const rows = await new Promise((resolve, reject) => {
 		db.all(sql, sliceParams, (err, arr) => {
 			if (err) return reject(err);
@@ -224,7 +238,8 @@ async function updateIdolById(id, idolUpdateData) {
 
 async function updateIdolByName(name, idolUpdateData) {
 	const { setString, valuesArr } = createPropertiesUPDATEColumns(idolUpdateData);
-	const sqlCommand = `UPDATE idol_profile SET ${setString} WHERE name = ?`
+	const sqlCommand = `UPDATE idol_profile SET ${setString} WHERE name = ?`;
+
 	return new Promise((resolve, reject) => {
 		db.run(sqlCommand, [...valuesArr, name], function (err) {
 			if (err) {
@@ -260,6 +275,7 @@ module.exports = {
 	searchIdolByFavorite,
 	searchIdolByMyFavorite,
 	searchIdolByNote,
+	searchIdolsByAliasName,
 	searchIdolsPaginated,
 	createIdols,
 	updateIdolByName,

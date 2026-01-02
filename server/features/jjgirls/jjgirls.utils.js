@@ -14,128 +14,137 @@ const BASE_IMAGE_TEMPLATE = 'https://jjgirls.com/japanese/#NAME#/#FOLDER#/#NAME#
 const RETRY_TIMES = 3;
 
 async function checkNameExist(name, proxyService = null) {
-    const lowerCaseName = name.toLowerCase();
-    const apiQueryNames = Array.from(new Set([lowerCaseName, inverseName(lowerCaseName)]));
-    for (const queryName of apiQueryNames) {
-        const firstImgUrl = BASE_IMAGE_TEMPLATE
-            .replaceAll('#NAME#', queryName)
-            .replaceAll('#FOLDER#', 1)
-            .replaceAll('#INDEX#', 1);
-        const isUrlValid = await isValidImageURL(firstImgUrl, proxyService);
-        // console.log('[firstImgUrl]', firstImgUrl, isUrlValid);
-        if (isUrlValid) {
-            return queryName;
-        }
-    }
-    return null;
+	const lowerCaseName = name.toLowerCase();
+	const apiQueryNames = Array.from(new Set([lowerCaseName, inverseName(lowerCaseName)]));
+	for (const queryName of apiQueryNames) {
+		const firstImgUrl = BASE_IMAGE_TEMPLATE
+			.replaceAll('#NAME#', queryName)
+			.replaceAll('#FOLDER#', 1)
+			.replaceAll('#INDEX#', 1);
+		const isUrlValid = await isValidImageURL(firstImgUrl, proxyService);
+		// console.log('[firstImgUrl]', firstImgUrl, isUrlValid);
+		if (isUrlValid) {
+			return queryName;
+		}
+	}
+	return null;
 }
 
-async function crawlIdolFromJJGirl(name) {
-    console.log("\n[JJGIRL]---------------");
+async function crawlIdolFromJJGirl(name, recrawl = false) {
+	console.log("\n[JJGIRL]---------------", name);
 
-    let htmlContentRoot = null, folderIndex = -1, imgIndex = -1;
+	let htmlContentRoot = null, folderIndex = -1, imgIndex = -1;
 
-    const proxyService = new ProxyRotator("random");
+	const proxyService = new ProxyRotator("random");
 
-    const queryName = name[0] === "_"
-        ? name.slice(1)
-        : await checkNameExist(name, proxyService);
-    if (!queryName) {
-        console.log("❌ JJGirl info not found", queryName);
-        return null;
-    }
-    console.log("🎉 JJGirl info found", queryName);
+	const queryName = name[0] === "_"
+		? name.slice(1)
+		: await checkNameExist(name, proxyService);
+	if (!queryName) {
+		console.log("❌ JJGirl info not found", queryName);
+		return null;
+	}
+	console.log("🎉 JJGirl info found", queryName);
 
-    const htmlFilePath = path.join(CACHED_FOLDER, queryName + "_jjgirl" + ".html");
-    if (fs.existsSync(htmlFilePath)) {
-        console.log("📌 File already exists:", htmlFilePath);
-        htmlContentRoot = fs.readFileSync(htmlFilePath, "utf-8");
-    } else {
-        console.log("🔥 Gonna crawl from jjgirl url idol:", queryName);
-        const url = `https://jjgirls.com/japanese/${queryName}/1/`;
-        htmlContentRoot = await fetchWithRetry(url, {}, proxyService, RETRY_TIMES);
-        // console.log('[htmlContentRoot]', htmlContentRoot);
-        // const fetchRes = await axios.get(`https://jjgirls.com/japanese/${queryName}/1/`);
-        // if (fetchRes.status !== 200) {
-        //     throw new Error(`Failed to fetch data for model ${queryName}. Status: ${fetchRes.status}`);
-        // }
+	const htmlFilePath = path.join(CACHED_FOLDER, queryName + "_jjgirl" + ".html");
+	if (fs.existsSync(htmlFilePath) && !recrawl) {
+		console.log("📌 File already exists:", htmlFilePath);
+		htmlContentRoot = fs.readFileSync(htmlFilePath, "utf-8");
+	} else {
+		console.log("🔥 Gonna crawl from jjgirl url idol:", queryName);
+		const url = `https://jjgirls.com/japanese/${queryName}/1/`;
+		htmlContentRoot = await fetchWithRetry(url, {}, proxyService, RETRY_TIMES);
+		// console.log('[htmlContentRoot]', htmlContentRoot);
+		// const fetchRes = await axios.get(`https://jjgirls.com/japanese/${queryName}/1/`);
+		// if (fetchRes.status !== 200) {
+		//     throw new Error(`Failed to fetch data for model ${queryName}. Status: ${fetchRes.status}`);
+		// }
 
-        // htmlContentRoot = fetchRes.data;
-        fs.writeFileSync(htmlFilePath, htmlContentRoot);
-    }
+		// htmlContentRoot = fetchRes.data;
+		fs.writeFileSync(htmlFilePath, htmlContentRoot);
+	}
 
-    // Get the root
-    const root = parse(htmlContentRoot);
+	if (!htmlContentRoot) {
+		return null;
+	}
 
-    const matchLinksElement = root.querySelector("div[class='matchlinks']");
-    for (const page of matchLinksElement.children) {
-        // console.log(page.innerText);
-        if (page.innerText === "Last") {
-            const hrefElementSegs = page.getAttribute("href").split("/").filter(Boolean);
-            const lastIndex = hrefElementSegs[hrefElementSegs.length - 1];
-            folderIndex = lastIndex;
-        }
-    }
+	// Get the root
+	const root = parse(htmlContentRoot);
 
-    // Get last image index
-    let newImageUrl = BASE_IMAGE_TEMPLATE
-        .replaceAll('#NAME#', queryName)
-        .replaceAll('#FOLDER#', folderIndex.toString())
-        .replaceAll('#INDEX#', "12");
-    if (await isValidImageURL(newImageUrl, proxyService)) {
-        imgIndex = 12;
-    } else {
-        for (let i = 1; i <= 11; i++) {
-            let newImageUrl = BASE_IMAGE_TEMPLATE
-                .replaceAll('#NAME#', queryName)
-                .replaceAll('#FOLDER#', folderIndex.toString())
-                .replaceAll('#INDEX#', i.toString());
-            isImage = await isValidImageURL(newImageUrl, proxyService);
-            await sleep(1000);
+	const matchLinksElement = root.querySelector("div[class='matchlinks']");
+	for (const page of matchLinksElement.children) {
+		// console.log(page.innerText);
+		if (page.innerText === "Last") {
+			const hrefElementSegs = page.getAttribute("href").split("/").filter(Boolean);
+			const lastIndex = hrefElementSegs[hrefElementSegs.length - 1];
+			folderIndex = lastIndex;
+		}
+	}
 
-            if (isImage) {
-                imgIndex = i;
-                break;
-            }
-        }
-    }
+	if (folderIndex === -1) {
+		console.log("❌ Cannot find folder index");
+		return null;
+	}
 
-    console.log(`✅ Page crawled succcessfully!`);
+	// Get last image index
+	// let newImageUrl = BASE_IMAGE_TEMPLATE
+	// 	.replaceAll('#NAME#', queryName)
+	// 	.replaceAll('#FOLDER#', folderIndex.toString())
+	// 	.replaceAll('#INDEX#', "12");
+	// if (await isValidImageURL(newImageUrl, proxyService)) {
+	// 	imgIndex = 12;
+	// } else {
+	// 	for (let i = 1; i <= 11; i++) {
+	// 		let newImageUrl = BASE_IMAGE_TEMPLATE
+	// 			.replaceAll('#NAME#', queryName)
+	// 			.replaceAll('#FOLDER#', folderIndex.toString())
+	// 			.replaceAll('#INDEX#', i.toString());
+	// 		isImage = await isValidImageURL(newImageUrl, proxyService);
+	// 		await sleep(1000);
 
-    return { queryName: queryName, folderIndex: parseInt(folderIndex), imageIndex: imgIndex }
+	// 		if (isImage) {
+	// 			imgIndex = i;
+	// 			break;
+	// 		}
+	// 	}
+	// }
+
+	console.log(`✅ Page crawled succcessfully!`);
+
+	return { queryName: queryName, folderIndex: parseInt(folderIndex), imageIndex: 12 }
 }
 
 async function isValidImageURL(url, proxyService = null) {
-    try {
-        let currentAxiosService = axios;
-        if (proxyService) {
-            const client = proxyService.axiosForNextProxy({
-                headers: {
-                    "Accept": "image/*, */*;q=0.5",
-                    "User-Agent": "axios-image-check/1.0",
-                    // Add only if needed:
-                    // "Referer": "https://your-site.example/",
-                    // "Cookie": "session=abc123; ..."
-                }
-            });
+	try {
+		let currentAxiosService = axios;
+		if (proxyService) {
+			const client = proxyService.axiosForNextProxy({
+				headers: {
+					"Accept": "image/*, */*;q=0.5",
+					"User-Agent": "axios-image-check/1.0",
+					// Add only if needed:
+					// "Referer": "https://your-site.example/",
+					// "Cookie": "session=abc123; ..."
+				}
+			});
 
-            currentAxiosService = client;
-        }
-        const response = await currentAxiosService.head(url, {
-            timeout: 5000, // ms
-            validateStatus: status => status < 500, // accept 4xx to analyze failures
-        }).catch(() => null);
+			currentAxiosService = client;
+		}
+		const response = await currentAxiosService.head(url, {
+			timeout: 5000, // ms
+			validateStatus: status => status < 500, // accept 4xx to analyze failures
+		}).catch(() => null);
 
-        const is404Redirected = response?.request.path.includes("404.Not.Found.svg");
-        const contentType = response?.headers['content-type'];
-        const isImage = contentType && contentType.startsWith('image/');
-        const statusOK = response?.status >= 200 && response?.status < 300;
+		const is404Redirected = response?.request.path.includes("404.Not.Found.svg");
+		const contentType = response?.headers['content-type'];
+		const isImage = contentType && contentType.startsWith('image/');
+		const statusOK = response?.status >= 200 && response?.status < 300;
 
-        return isImage && statusOK && !is404Redirected;
-    } catch (err) {
-        console.error('Error checking image:', err.message);
-        return false;
-    }
+		return isImage && statusOK && !is404Redirected;
+	} catch (err) {
+		console.error('Error checking image:', err.message);
+		return false;
+	}
 }
 
 // async function isValidImageURLWithProxy(url, proxyService) {
@@ -232,9 +241,9 @@ async function isValidImageURL(url, proxyService = null) {
 // run();
 
 module.exports = {
-    checkNameExist,
-    crawlIdolFromJJGirl,
-    isValidImageURL
+	checkNameExist,
+	crawlIdolFromJJGirl,
+	isValidImageURL
 };
 
 // crawlIdolFromJJGirl("iori-kawaii").then(res => { console.log('[res]', res); }).catch(err => { console.log('[err]', err); })

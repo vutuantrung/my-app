@@ -81,6 +81,7 @@ function cosplayerSerialize() {
     CREATE TABLE IF NOT EXISTS model_profile (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
+		alias TEXT,
         dob TEXT,
         measurements TEXT,
         height INTEGER,

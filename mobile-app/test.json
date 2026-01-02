@@ -1,28 +1,17 @@
 {
-  "avatar": "http://192.168.1.77:3123/images/idol-avatars/aika-avatar.jpg",
-  "bio": "4.64/5",
-  "country": "Hyogo,Tokyo",
-  "cover": "http://192.168.1.77:3123/images/idol-pictures/anonymous-2.webp",
-  "debut": "2011-02-13",
-  "dob": "1990-08-25",
-  "favorites": 372,
-  "films": [
-    { "code": "cjob-118", "thumb": "https://pics.dmm.co.jp/digital/video/cjob00118/cjob00118ps.jpg" },
-    { "code": "bmw-244", "thumb": "https://pics.dmm.co.jp/digital/video/bmw00244/bmw00244ps.jpg" },
-    { "code": "tikb-124", "thumb": "https://pics.dmm.co.jp/digital/video/tikb00124/tikb00124ps.jpg" },
-    { "code": "hodv-21405", "thumb": "https://pics.dmm.co.jp/digital/video/5642hodv21405/5642hodv21405ps.jpg" },
-    { "code": "hodv-21183", "thumb": "https://pics.dmm.co.jp/digital/video/41hodv021183/41hodv021183ps.jpg" },
-    { "code": "mizd-012", "thumb": "https://pics.dmm.co.jp/digital/video/mizd00012/mizd00012ps.jpg" },
-    { "code": "dld-027", "thumb": "https://pics.dmm.co.jp/digital/video/118dld00027/118dld00027ps.jpg" },
-    { "code": "rct-712", "thumb": "https://pics.dmm.co.jp/digital/video/1rct00712/1rct00712ps.jpg" }
-  ],
-  "id": "21",
-  "jp": "AIKA",
-  "measurements": { "bust": "89", "height": "163", "hips": "84", "waist": "58", "weight": "" },
-  "name": "aika",
-  "pictures": [],
-  "rating": 4.64,
-  "socials": {},
-  "tags": ["F(Cup size)", "long", "blonde", "milf", "twenties", "gal"],
-  "videosCount": 1588
+  "code": "jul-939",
+  "previewUrl": "https://cdn.coverr.co/videos/coverr-misty-mountains-7655/1080p.mp4",
+  "rating": 4,
+  "releaseDate": "2021-01-01",
+  "runtime": 95,
+  "tags": ["Drama"],
+  "actresses": ["ai-kano-2"],
+  "scenes": [
+    { "id": "undefined-sc-1", "uri": "https://picsum.photos/seed/undefined_sc_1/800/450" },
+    { "id": "undefined-sc-2", "uri": "https://picsum.photos/seed/undefined_sc_2/800/450" },
+    { "id": "undefined-sc-3", "uri": "https://picsum.photos/seed/undefined_sc_3/800/450" },
+    { "id": "undefined-sc-4", "uri": "https://picsum.photos/seed/undefined_sc_4/800/450" },
+    { "id": "undefined-sc-5", "uri": "https://picsum.photos/seed/undefined_sc_5/800/450" },
+    { "id": "undefined-sc-6", "uri": "https://picsum.photos/seed/undefined_sc_6/800/450" }
+  ]
 }

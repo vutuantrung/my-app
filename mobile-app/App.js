@@ -10,6 +10,8 @@ import ActressScreen from './screens/ActressScreen';
 import ActressFilmScreen from './screens/ActressFilmScreen';
 import ActressDetailScreen from './screens/ActressDetailScreen';
 import ScenesLightboxScreen from './screens/ScenesLightboxScreen';
+import CoserScreen from './screens/CoserScreen';
+import CoserDetailScreen from './screens/CoserDetailScreen';
 import DashboardScreen from './screens/DashboardScreen';
 import FilmScreen from './screens/FilmScreen';
 import FilmDetailScreen from './screens/FilmDetailScreen';
@@ -59,6 +61,17 @@ function Tabs() {
 					return (
 						<Icon
 							name='film'
+							size={size}
+							color={color}
+						/>
+					);
+				}
+			}} />
+			<Tab.Screen name="Coser" component={CoserScreen} options={{
+				tabBarIcon: ({ size, focused, color }) => {
+					return (
+						<Icon
+							name={focused ? 'diamond' : 'diamond-outline'}
 							size={size}
 							color={color}
 						/>
@@ -136,6 +149,16 @@ export default function App() {
 								headerTintColor: '#e7ecf3',
 							}}
 						/>
+						<Stack.Screen
+							name="CoserDetail"
+							component={CoserDetailScreen}
+							options={{
+								title: 'Coser',
+								headerStyle: { backgroundColor: '#0f1115' },
+								headerTintColor: '#e7ecf3',
+							}}
+						/>
+
 					</Stack.Navigator>
 				</NavigationContainer>
 			</NotificationProvider>

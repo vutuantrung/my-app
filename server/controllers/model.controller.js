@@ -85,12 +85,13 @@ async function searchModel(req, res) {
 		}
 
 		const model = {
-			name: modelData.name,
+			name: mainName,
+			alias: Array.from(new Set([mainName, modelData.name])).join(","),
 			albums_count: modelData.albums.length,
 			created_time: Date.now(),
 			updated_time: Date.now()
 		}
-		console.log('[model]', model);
+		// console.log('[model]', model);
 
 		//bdb7949c382587ee
 		const albums = modelData.albums.map(e => ({
@@ -101,20 +102,21 @@ async function searchModel(req, res) {
 			created_time: Date.now(),
 			updated_time: Date.now()
 		}))
-		console.log('[albums]', albums);
+		// console.log('[albums]', albums);
 
 		const modelAlbums = albums.map(a => ({
 			album_id: a.id,
 			model_name: name.toLowerCase()
 		}))
-		console.log('[modelAlbums]', modelAlbums);
+		// console.log('[modelAlbums]', modelAlbums);
 
 		// const thumbsName = albums.map(a => a.id);
 
 		// 5. save to db
 		// 5.1 save model
+		console.log('[modelsFound]', modelsFound)
 		if (modelsFound.data.length > 0) {
-			if (mainName) await modelDbServices.updateModelByName(mainName, model);
+			if (mainName) await modelDbServices.updateModelByName(name, model);
 		} else {
 			await modelDbServices.createModels([model]);
 		}
@@ -130,6 +132,7 @@ async function searchModel(req, res) {
 		else {
 			await modelAlbumDbServices.createModelAlbum(modelAlbums);
 		}
+		console.log('[mainName]', mainName, name)
 
 		let resultSendback = displayType === "json"
 			? JSON.stringify(modelData)
@@ -141,7 +144,31 @@ async function searchModel(req, res) {
 	}
 }
 
+async function getPagination(req, res) {
+	try {
+		const {
+			page, pageSize,
+			search,
+			my_favorite,
+			sortBy,
+			sortOrder,
+		} = req.query;
+
+		const result = await modelDbServices.searchModelsPaginated({
+			page, pageSize,
+			search,
+			my_favorite: (my_favorite === undefined ? undefined : Number(my_favorite)),
+			sortBy,
+			sortOrder,
+		});
+
+		return res.json(result);
+	} catch (err) {
+		console.error("[listIdolsPaginated]", err);
+		return res.status(500).json({ error: "Internal Server Error" });
+	}
+}
 
 // searchModel({ body: { name: "byoru" } })
 
-module.exports = { searchModel }
+module.exports = { searchModel, getPagination }

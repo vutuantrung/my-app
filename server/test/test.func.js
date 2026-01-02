@@ -425,8 +425,6 @@ async function assignContentId() {
 	}
 }
 
-
-
 async function assignContentIdSamples() {
 	const filesPath = "./test/samples";
 

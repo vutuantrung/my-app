@@ -39,14 +39,14 @@ export function NotificationProvider({ children }) {
 					return;
 				}
 
-				console.log(data)
+				// console.log('[data]', data)
 
 				const notif = {
 					id: data.id || String(Date.now()),
-					type: data.type || 'SYSTEM',
 					title: data.title || 'Notification',
 					message: data.message || '',
 					createdAt: data.createdAt || new Date().toISOString(),
+					messageType: data.messageType || 'SYSTEM',
 					read: false,
 					data: data.data || {},
 				};

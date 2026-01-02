@@ -7,28 +7,53 @@ const idolMovieDbServices = require("../services/idolMovie.service.database");
 const idolCrawlingServices = require("../services/idol.service.crawl");
 
 const { parseIdolName, renderIdolHTMLTemplate, shuffleArray, generateRandomNumber } = require("../helpers");
-const { crawlIdolFromJJGirl } = require("../features/jjgirls/jjgirls.utils");
 const { broadcast } = require("../serverWS");
+const { CACHED_FOLDER } = require("../constants");
 
 async function searchIdol(req, res) {
 	try {
 		console.log('[req.body]', req.body);
-		const { name, updateRecord, reuseSavedFile, displayType } = req.body;
+		const { name, updateRecord, reuseSavedFile, displayType, alias, representativeName } = req.body;
 		let [name_jdb, name_jher, name_jjg] = name.split(",");
+		console.log("name", { name_jdb, name_jher, name_jjg });
 
-		const mainName = parseIdolName(name_jdb).replace("_", "");// REMOVE UNDER_SCORE
+		const mainName = representativeName
+			? representativeName.trim()
+			: parseIdolName(name_jdb).replace("_", "");// REMOVE UNDER_SCORE
 		console.log("\n👩  ", mainName);
 
-		// 1. search in db
-		const idolsFound = await idolDbServices.searchIdolsByNames(mainName);
-		// console.log('[idolsFound]', idolsFound);
+		const cachedPath = path.join(CACHED_FOLDER, mainName + "_profile.json");
 
-		// 2. if has => return
-		if (idolsFound.err) {
-			throw new Error(err.message);
+		// 1. search in db
+		let idolFound = null;
+		const sameNameIdolsFound = await idolDbServices.searchIdolsByNames(mainName);
+		if (sameNameIdolsFound.err) {
+			throw new Error(sameNameIdolsFound.err.message);
 		}
+		if (sameNameIdolsFound.data.length > 1) {
+			throw new Error("Multiple idols found with the same name: " + mainName);
+		}
+		if (sameNameIdolsFound.data.length > 0) {
+			idolFound = {
+				...idolFound,
+				...sameNameIdolsFound.data[0],
+			}
+		}
+
 		// console.log('[idolsFound]', idolsFound);
-		if (idolsFound.data.length > 0 && !updateRecord) {
+		const sameAliasIdolsFound = await idolDbServices.searchIdolsByAliasName(mainName);
+		if (sameAliasIdolsFound.data.length > 1) {
+			throw new Error("Multiple idols found with the same alias name: " + mainName);
+		}
+		if (sameAliasIdolsFound.data.length > 0) {
+			idolFound = {
+				...idolFound,
+				...sameAliasIdolsFound.data[0],
+			}
+		}
+
+		// console.log('[idolFound]', idolFound);
+		if (idolFound && updateRecord) {
 			const searchMoviesReq = await idolMovieDbServices.searchMoviesByIdolName(mainName);
 
 			const moviesCode = searchMoviesReq.data.map(e => e.movie_code);
@@ -41,7 +66,7 @@ async function searchIdol(req, res) {
 			// 	? searchMoviesReq.map(e => ({ code: e.movie_code, thumb: e.thumbs_short }))
 			// 	: searchMoviesReq.map(e => e.movie_code);
 			const jsonDataReturn = {
-				...idolsFound.data[0],
+				...idolFound,
 				movies: moviesReturn
 			}
 			// 4.5 get avatar
@@ -70,7 +95,7 @@ async function searchIdol(req, res) {
 			// console.log(jsonDataReturn);
 			let resultSendback = displayType === "json"
 				? JSON.stringify(jsonDataReturn)
-				: renderIdolHTMLTemplate(idolsFound.data[0], moviesDataReq.data);
+				: renderIdolHTMLTemplate(idolFound, moviesDataReq.data);
 
 			res.status(200).send(resultSendback);
 			return;
@@ -78,53 +103,117 @@ async function searchIdol(req, res) {
 
 		// 3. crawl from internet
 		// const cachedPath = `../cached/${name}.json`
-		const cachedPath = path.join(process.cwd(), "cached", mainName + ".json");
 		const exist = fs.existsSync(cachedPath);
 
 		let idolData = null;
-		if (exist && reuseSavedFile) {
-			const d = fs.readFileSync(cachedPath, "utf-8");
-			idolData = JSON.parse(d);
-		} else {
-			const tmp_name_jher = name_jher
-				? (name_jher[0] === "_" ? name_jher : parseIdolName(name_jher))
-				: (name_jdb[0] === "_" ? name_jdb : parseIdolName(name_jdb));
-			const tmp_name_jjg = name_jjg
-				? (name_jjg[0] === "_" ? name_jjg : parseIdolName(name_jjg))
-				: (name_jdb[0] === "_" ? name_jdb : parseIdolName(name_jdb));
+		// if (exist && reuseSavedFile) {
+		// 	const d = fs.readFileSync(cachedPath, "utf-8");
+		// 	idolData = JSON.parse(d);
+		// } else {
+		// 	const tmp_name_jdb = name_jdb[0] === "_" ? name_jdb : parseIdolName(name_jdb);
+		// 	const tmp_name_jher = name_jher
+		// 		? (name_jher[0] === "_" ? name_jher : parseIdolName(name_jher))
+		// 		: tmp_name_jdb;
+		// 	const tmp_name_jjg = name_jjg
+		// 		? (name_jjg[0] === "_" ? name_jjg : parseIdolName(name_jjg))
+		// 		: tmp_name_jdb;
 
-			if (idolsFound.data.length > 0) {
-				const savedRecord = idolsFound.data[0];
-				const metadata = JSON.parse(savedRecord.metadata);
-				name_jdb = "_" + savedRecord.name;
-				name_jher = metadata?.javherQueryName ? "_" + metadata.javherQueryName : tmp_name_jher;
-				name_jjg = metadata?.jjGirlQueryName ? "_" + metadata.jjGirlQueryName : tmp_name_jjg;
-			} else {
-				name_jdb = name_jdb[0] === "_" ? name_jdb : parseIdolName(name_jdb);
-				name_jher = tmp_name_jher;
-				name_jjg = tmp_name_jjg;
-			}
-			// console.log("name", { name_jdb, name_jher, name_jjg });
+		// 	if (idolFound) {
+		// 		const savedRecord = idolFound;
+		// 		const metadata = JSON.parse(savedRecord.metadata);
+		// 		// name_jdb = "_" + (metadata?.javdbQueryName ?? tmp_name_jdb);
+		// 		name_jdb = metadata?.javdbQueryName ? "_" + metadata.javdbQueryName : tmp_name_jdb;
+		// 		name_jher = metadata?.javherQueryName ? "_" + metadata.javherQueryName : tmp_name_jher;
+		// 		name_jjg = metadata?.jjGirlQueryName ? "_" + metadata.jjGirlQueryName : tmp_name_jjg;
+		// 	} else {
+		// 		name_jdb = tmp_name_jdb;
+		// 		name_jher = tmp_name_jher;
+		// 		name_jjg = tmp_name_jjg;
+		// 	}
+		// 	console.log("name", { name_jdb, name_jher, name_jjg });
 
-			idolData = await idolCrawlingServices.crawlIdolByName({ name_jdb, name_jher, name_jjg });
+		// 	idolData = await idolCrawlingServices.crawlIdolByName({ name_jdb, name_jher, name_jjg }, updateRecord);
+		// }
+
+		idolData = await idolCrawlingServices.crawlIdolByName({ name_jdb, name_jher, name_jjg }, updateRecord);
+
+		// console.log('[idolDataidolData]', idolData)
+
+		if (!idolFound && !idolData) {
+			res.status(200).send({ errMsg: "Idol not found !" });
+			return;
 		}
-
-		// console.log('[idolData]', idolData);
 		// 4. treat data
 		// 4.1 idol
 		const idol = JSON.parse(JSON.stringify(idolData));
 		delete idol.movies;
 
-		// 4.3 idol - movie
-		// console.log(idolData?.movies.map(e => e.metadata.content_id));
+		// 4.2 get avatar
+		const avatarDir = path.join(process.cwd(), "database", "idol-avatars");
+		if (fs.existsSync(path.join(avatarDir, `${mainName}-avatar.jpg`))) idol.avatar = `/images/idol-avatars/${mainName}-avatar.jpg`;
+		if (fs.existsSync(path.join(avatarDir, `${mainName}-avatar-gif.gif`))) idol.avatar = `/images/idol-avatars/${mainName}-avatar-gif.gif`;
+		if (!idol.avatar) idol.avatar = `/images/idol-avatars/anonymous.jpg`;
+
+		// 4.3 get pictures
+		const picturesDir = path.join(process.cwd(), "database", "idol-pictures");
+		for (let i = 1; i <= 10; i++) {
+			const picPath = path.join(picturesDir, `${mainName}-${i}.jpg`);
+			if (fs.existsSync(picPath)) {
+				const picUrl = `/images/idol-pictures/${mainName}-${i}.jpg`;
+				if (!idol.pictures) idol.pictures = [];
+				idol.pictures.push(picUrl);
+			}
+		}
+
+		// 4.4 get cover
+		const coverDir = path.join(process.cwd(), "database", "idol-pictures");
+		if (fs.existsSync(path.join(coverDir, `${mainName}-0.jpg`))) idol.cover = `/images/idol-pictures/${mainName}-0.jpg`;
+		if (fs.existsSync(path.join(coverDir, `${mainName}-0.webp`))) idol.cover = `/images/idol-pictures/${mainName}-0.webp`;
+		if (!idol.cover) idol.cover = `/images/idol-pictures/anonymous-${generateRandomNumber(0, 10)}.jpg`;
+
+		// 4.5 check alias + representative name
+		if (representativeName && representativeName.trim().length > 0) {
+			idol.name = representativeName;
+
+			const aliasNames = alias && alias.trim().length > 0
+				? alias.split(",").map(e => e.trim())
+				: [];
+			aliasNames.push(mainName);
+			if (alias && alias.trim().length > 0) {
+				aliasNames.push(...alias.split(",").map(e => e.trim()));
+			}
+			idol.alias = Array.from(new Set([aliasNames, ...idol.alias])).join(",");
+		}
+
+		// 5. save to db
+		// 5.1 save idol
+		// console.log('[idol]', idol);
+		if (idolFound) {
+			if (mainName) await idolDbServices.updateIdolByName(mainName, idol);
+			broadcast("actress.updated", "Idol updated: " + mainName, {
+				idol: { name: mainName }
+			})
+		} else {
+			await idolDbServices.createIdols([idol]);
+			broadcast("actress.created", "Idol added: " + mainName, {
+				idol: { name: mainName }
+			})
+		}
+
+		// 5.3 save idol - movie (s)
+		// console.log(idolData?.movies)
 		const idolMovies = idolData?.movies
 			? idolData.movies.map(movie => ({
 				movie_contentId: movie.metadata.content_id,
 				movie_code: movie.code,
 				idol_name: mainName
 			})) : [];
+		if (idolMovies.length === 0) console.log('No idol movies to save.');
+		else {
+			await idolMovieDbServices.createIdolMovies(idolMovies);
+		}
 
-		// 4.4 movies
+		// 5.2 save movie(s)
 		const movies = idolData?.movies
 			? idolData.movies.map(movie => ({
 				code: movie.code,
@@ -137,66 +226,27 @@ async function searchIdol(req, res) {
 				created_time: Date.now(),
 				updated_time: Date.now()
 			})) : [];
-
-		// 4.5 get avatar
-		const avatarDir = path.join(process.cwd(), "database", "idol-avatars");
-		if (fs.existsSync(path.join(avatarDir, `${mainName}-avatar.jpg`))) idol.avatar = `/images/idol-avatars/${mainName}-avatar.jpg`;
-		if (fs.existsSync(path.join(avatarDir, `${mainName}-avatar-gif.gif`))) idol.avatar = `/images/idol-avatars/${mainName}-avatar-gif.gif`;
-		if (!idol.avatar) idol.avatar = `/images/idol-avatars/anonymous.jpg`;
-
-		// 4.6 get pictures
-		const picturesDir = path.join(process.cwd(), "database", "idol-pictures");
-		for (let i = 1; i <= 10; i++) {
-			const picPath = path.join(picturesDir, `${mainName}-${i}.jpg`);
-			if (fs.existsSync(picPath)) {
-				const picUrl = `/images/idol-pictures/${mainName}-${i}.jpg`;
-				if (!idol.pictures) idol.pictures = [];
-				idol.pictures.push(picUrl);
-			}
-		}
-
-		// 4.7 get cover
-		const coverDir = path.join(process.cwd(), "database", "idol-pictures");
-		if (fs.existsSync(path.join(coverDir, `${mainName}-0.jpg`))) idol.cover = `/images/idol-pictures/${mainName}-0.jpg`;
-		if (fs.existsSync(path.join(coverDir, `${mainName}-0.webp`))) idol.cover = `/images/idol-pictures/${mainName}-0.webp`;
-		if (!idol.cover) idol.cover = `/images/idol-pictures/anonymous-${generateRandomNumber(0, 10)}.jpg`;
-
-		// 5. save to db
-		// 5.1 save idol
-		if (idolsFound.data.length > 0) {
-			if (mainName) await idolDbServices.updateIdolByName(mainName, idol);
-			broadcast("movie.updated", "New idol updated: " + mainName, {
-				idol: { name: mainName }
-			})
-		} else {
-			await idolDbServices.createIdols([idol]);
-			broadcast("movie.created", "New idol added: " + mainName, {
-				idol: { name: mainName }
-			})
-		}
-
-		// 5.2 save movie(s)
 		if (movies.length === 0) console.log('No movies to save.');
 		else {
+			// console.log('[moviesmovies]', movies.map(e => ({ code: e.code, contentId: e.contentId })));
+			const mvs = shuffleArray(movies.map(e => ({ code: e.code, contentId: e.contentId }))).splice(0, 12);
+			broadcast("movies", "Movies created/updated: " + movies.length + " movie(s)", {
+				movieSamples: mvs,
+				totalMoviesCount: movies.length
+			})
 			await movieDbServices.createMovies(movies);
 		}
 
-		// 5.3 save idol - movie (s)
-		// console.log('[idol]', idol);
-		if (idolMovies.length === 0) console.log('No idol movies to save.');
-		else {
-			await idolMovieDbServices.createIdolMovies(idolMovies);
-		}
+		// 6. save to cached
+		fs.writeFileSync(cachedPath, JSON.stringify({ ...idol, ...idolData }));
 
-		console.log('[idol]', idol)
-
-		let resultSendback = displayType === "json"
+		const resultSendback = displayType === "json"
 			? JSON.stringify(idol)
 			: renderIdolHTMLTemplate(idol, movies);
 		res.status(200).send(resultSendback);
 	} catch (error) {
-		console.error(error);
-		res.status(500).send(error.message);
+		console.log(error);
+		res.status(500).send({ errMsg: error.message });
 	}
 }
 

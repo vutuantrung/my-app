@@ -8,10 +8,8 @@ const idolDbServices = require("../services/idol.service.database");
 const movieDbServices = require("../services/movie.service.database");
 const movieCrawlingServices = require("../services/movie.service.crawl");
 const idolMovieDbServices = require("../services/idolMovie.service.database");
-const idolCrawlingServices = require("../services/idol.service.crawl");
 
 const { treatMovieCode, renderMovieHTMLTemplate, shuffleArray } = require("../helpers");
-const { CACHED_FOLDER } = require("../constants");
 const { broadcast } = require("../serverWS");
 
 async function searchMovie(req, res) {
@@ -81,6 +79,10 @@ async function searchMovie(req, res) {
 			}
 		}
 		// console.log('[movieData]', movieData)
+		if (moviesFound.data.length === 0 && !movieData) {
+			res.status(200).send({ errMsg: "Movie not found !" });
+			return;
+		}
 
 		// 4. treat data
 		const movie = movieData
@@ -112,6 +114,9 @@ async function searchMovie(req, res) {
 				movie_contentId: movieData?.content_id,
 				movie_code: movieData?.dvd_id.toLowerCase(),
 				idol_name: idol.raw,
+				metadata: {
+					javherQueryName: idol.raw,
+				}
 			})) : null;
 
 		// idol(s) records
@@ -139,15 +144,15 @@ async function searchMovie(req, res) {
 		// 5.2 save movie
 		if (movie) {
 			if (moviesFound.data.length > 0) {
-				// console.log('[moviesFound.data]', moviesFound.data);
 				await movieDbServices.updateMovieByContentId(movie.contentId, movie);
-				broadcast("movie.updated", "New movie updated: " + movie.code.toUpperCase(), {
-					movie: { code: movie.code, title: movie.title }
+				broadcast("movie.updated", "Movie updated: " + movie.code.toUpperCase(), {
+					movie: { code: movie.code, title: movie.title, contentId: movie.contentId }
 				})
 			} else {
+				console.log('[moviesCreated.data]', movie);
 				await movieDbServices.createMovies([movie]);
-				broadcast("movie.created", "New movie added: " + movie.code.toUpperCase(), {
-					movie: { code: movie.code, title: movie.title }
+				broadcast("movie.created", "Movie added: " + movie.code.toUpperCase(), {
+					movie: { code: movie.code, title: movie.title, contentId: movie.contentId }
 				})
 			}
 		}
@@ -160,19 +165,18 @@ async function searchMovie(req, res) {
 		const movieDisplay = movieData ? movie : moviesFound;
 		const idolsDisplay = movieData
 			? idols.map((e) => e.name)
-			: idolListFound.data?.length > 0
+			: idolListFound?.data?.length > 0
 				? idolListFound.data.map((e) => e.idol_name)
 				: null;
-		const resultSendback = movieDisplay
-			? displayType === "json"
-				? JSON.stringify(movie)
-				: renderMovieHTMLTemplate([{ ...movieDisplay, idolList: idolsDisplay }])
-			: "Movie not found";
+
+		const resultSendback = displayType === "json"
+			? JSON.stringify(movie)
+			: renderMovieHTMLTemplate([{ ...movieDisplay, idolList: idolsDisplay }]);
 
 		res.status(200).send(resultSendback);
 	} catch (error) {
 		console.log(error);
-		res.status(500).send(error.message);
+		res.status(500).send({ errMsg: error.message });
 	}
 }
 

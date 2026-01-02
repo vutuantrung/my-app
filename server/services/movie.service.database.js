@@ -233,7 +233,6 @@ async function searchMovieById(id) {
 }
 
 async function searchMoviesPaginated(options = {}) {
-	console.log(options)
 	const page = clamp(parseInt(options.page || 1, 10) || 1, 1, 1e9);
 	const pageSize = clamp(parseInt(options.pageSize || 20, 10) || 20, 1, 200);
 	const sort = normalizeMovieSort(options.sortBy);
