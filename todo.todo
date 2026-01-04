@@ -7,4 +7,4 @@
 [ok] rework the image-thumbnails of videos
 [] Update Film not working properly
 [] now, if save movie with "_", the name idol will be in javher => need to find a way to match the name of idol (in table idol_movie and idol_profile) with the representative name
-[] jher query name  may have more than one, add name1|name2
+[ok] jher query name  may have more than one, add name1|name2

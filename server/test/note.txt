@@ -1,18 +1,16 @@
-New-NetFirewallRule `
-  -DisplayName "Express-WS-3124" `
-  -Direction Inbound `
-  -Protocol TCP `
-  -LocalPort 3124 `
-  -Profile Private `
-  -Action Allow
-
-Get-NetFirewallRule -DisplayName "Express-WS-3124" |
-  Format-List DisplayName,Enabled,Profile,Direction,Action
-
-Get-NetFirewallRule -DisplayName "Express-WS-3124" |
-Get-NetFirewallPortFilter |
-Format-List LocalPort,Protocol
-
+[FIREWALL_RULES]
 netstat -ano | findstr ":3124"
 
-lets create a new ws server running on port 3124, whenever something changes (new movie, new idol, news, systems...), the server can broadcast to all its subcribers, the format will be json with properties(id, messageType, title, createdAt, data)
+New-NetFirewallRule -DisplayName "Express-HTTP-3123" -Direction Inbound -Protocol TCP -LocalPort 3213 -Profile Private -Action Allow
+Get-NetFirewallRule -DisplayName "Express-HTTP-3123" | Get-NetFirewallPortFilter | Format-List LocalPort,Protocol
+Remove-NetFirewallRule -DisplayName "Express-HTTP-3123"
+
+New-NetFirewallRule -DisplayName "Express-WS-3124" -Direction Inbound -Protocol TCP -LocalPort 3214 -Profile Private -Action Allow
+Get-NetFirewallRule -DisplayName "Express-WS-3124" | Get-NetFirewallPortFilter | Format-List LocalPort,Protocol
+Remove-NetFirewallRule -DisplayName "Express-WS-3124"
+
+New-NetFirewallRule -DisplayName "Express-HTTP-HELPER-3125" -Direction Inbound -Protocol TCP -LocalPort 3125 -Profile Private -Action Allow
+Get-NetFirewallRule -DisplayName "Express-HTTP-HELPER-3125" | Get-NetFirewallPortFilter | Format-List LocalPort,Protocol
+Remove-NetFirewallRule -DisplayName "Express-HTTP-HELPER-3125"
+
+Re-check if computer (server host) ip is correct (in ipconfig)
